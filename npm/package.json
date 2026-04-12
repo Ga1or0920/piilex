@@ -1,0 +1,59 @@
+{
+  "name": "piilex",
+  "version": "0.1.0",
+  "description": "PII Lexical Analyzer -- Detect PII in source code and map to GDPR/CCPA regulatory frameworks",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/piilex/piilex"
+  },
+  "homepage": "https://github.com/piilex/piilex#readme",
+  "bugs": {
+    "url": "https://github.com/piilex/piilex/issues"
+  },
+  "author": "piilex contributors",
+  "bin": {
+    "piilex": "bin/cli.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "pii",
+    "privacy",
+    "gdpr",
+    "ccpa",
+    "security",
+    "scanner",
+    "static-analysis",
+    "compliance",
+    "data-protection",
+    "personal-data",
+    "sast",
+    "cli",
+    "typescript",
+    "javascript",
+    "python",
+    "code-scanner",
+    "data-flow",
+    "regulatory"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}

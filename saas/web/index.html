@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>piilex Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    header { background: #1a1a2e; color: white; padding: 16px 0; }
+    header .container { display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 20px; }
+    header .user-info { font-size: 14px; opacity: 0.8; }
+    nav { background: white; border-bottom: 1px solid #ddd; }
+    nav .container { display: flex; gap: 24px; }
+    nav a { display: block; padding: 12px 0; text-decoration: none; color: #666; border-bottom: 2px solid transparent; }
+    nav a.active { color: #1a1a2e; border-color: #4361ee; font-weight: 600; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .card h2 { font-size: 16px; margin-bottom: 12px; color: #1a1a2e; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat { text-align: center; }
+    .stat .value { font-size: 32px; font-weight: 700; }
+    .stat .label { font-size: 13px; color: #666; margin-top: 4px; }
+    .stat.critical .value { color: #d32f2f; }
+    .stat.high .value { color: #f57c00; }
+    .stat.medium .value { color: #fbc02d; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #eee; }
+    th { font-size: 12px; text-transform: uppercase; color: #999; font-weight: 600; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .badge.critical { background: #fde8e8; color: #d32f2f; }
+    .badge.high { background: #fff3e0; color: #f57c00; }
+    .badge.free { background: #e8e8e8; color: #666; }
+    .badge.pro { background: #e8f5e9; color: #2e7d32; }
+    .btn { display: inline-block; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
+    .btn-primary { background: #4361ee; color: white; }
+    .btn-outline { background: white; color: #4361ee; border: 1px solid #4361ee; }
+    .empty { text-align: center; padding: 40px; color: #999; }
+    #auth-view, #dashboard-view { display: none; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 13px; margin-bottom: 4px; color: #666; }
+    .form-group input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<!-- Auth View -->
+<div id="auth-view">
+  <div class="container" style="max-width:400px; margin-top:80px;">
+    <div class="card">
+      <h2 id="auth-title">Sign Up</h2>
+      <div id="signup-fields">
+        <div class="form-group"><label>Team Name</label><input id="team-name" placeholder="My Team"></div>
+        <div class="form-group"><label>Name</label><input id="user-name" placeholder="Jane Doe"></div>
+      </div>
+      <div class="form-group"><label>Email</label><input id="auth-email" type="email" placeholder="you@company.com"></div>
+      <div class="form-group"><label>Password</label><input id="auth-password" type="password" placeholder="Password"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="doAuth()">Submit</button>
+      <p style="text-align:center;margin-top:12px;font-size:13px;">
+        <a href="#" onclick="toggleAuth()" id="auth-toggle">Already have an account? Log in</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard View -->
+<div id="dashboard-view">
+  <header>
+    <div class="container">
+      <h1>piilex Dashboard</h1>
+      <div class="user-info">
+        <span id="user-email"></span>
+        <span id="team-plan" class="badge" style="margin-left:8px;"></span>
+        <a href="#" onclick="logout()" style="color:#aaa;margin-left:16px;">Logout</a>
+      </div>
+    </div>
+  </header>
+  <nav>
+    <div class="container">
+      <a href="#" class="active" onclick="showTab('scans')">Scans</a>
+      <a href="#" onclick="showTab('team')">Team</a>
+      <a href="#" onclick="showTab('keys')">API Keys</a>
+      <a href="#" onclick="showTab('billing')">Billing</a>
+    </div>
+  </nav>
+
+  <div class="container" style="margin-top:24px;">
+    <!-- Scans Tab -->
+    <div id="tab-scans">
+      <div class="stats" id="scan-stats"></div>
+      <div class="card">
+        <h2>Recent Scans</h2>
+        <table>
+          <thead><tr><th>Project</th><th>Findings</th><th>Critical</th><th>High</th><th>Files</th><th>Duration</th><th>Date</th></tr></thead>
+          <tbody id="scans-table"></tbody>
+        </table>
+        <div id="scans-empty" class="empty" style="display:none;">
+          No scans yet. Run <code>piilex scan --upload</code> to get started.
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Tab -->
+    <div id="tab-team" style="display:none;">
+      <div class="card">
+        <h2>Team Members</h2>
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
+          <tbody id="team-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Keys Tab -->
+    <div id="tab-keys" style="display:none;">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h2>API Keys</h2>
+          <button class="btn btn-primary" onclick="createKey()">Create Key</button>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th>Last Used</th><th>Created</th><th></th></tr></thead>
+          <tbody id="keys-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Billing Tab -->
+    <div id="tab-billing" style="display:none;">
+      <div class="card">
+        <h2>Subscription</h2>
+        <div id="billing-info"></div>
+        <div style="margin-top:16px;">
+          <button class="btn btn-primary" onclick="upgrade()">Upgrade to Pro</button>
+          <button class="btn btn-outline" onclick="manageSubscription()" style="margin-left:8px;">Manage Subscription</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+let token = localStorage.getItem('piilex_token');
+let isSignup = true;
+
+function toggleAuth() {
+  isSignup = !isSignup;
+  document.getElementById('auth-title').textContent = isSignup ? 'Sign Up' : 'Log In';
+  document.getElementById('signup-fields').style.display = isSignup ? 'block' : 'none';
+  document.getElementById('auth-toggle').textContent = isSignup ? 'Already have an account? Log in' : "Don't have an account? Sign up";
+}
+
+async function doAuth() {
+  const email = document.getElementById('auth-email').value;
+  const password = document.getElementById('auth-password').value;
+  const endpoint = isSignup ? '/api/auth/signup' : '/api/auth/login';
+  const body = isSignup
+    ? { email, password, name: document.getElementById('user-name').value, team_name: document.getElementById('team-name').value }
+    : { email, password };
+
+  const res = await fetch(API + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) { alert('Authentication failed'); return; }
+  const data = await res.json();
+  token = data.token;
+  localStorage.setItem('piilex_token', token);
+  showDashboard(data.user, data.team);
+}
+
+function logout() {
+  token = null;
+  localStorage.removeItem('piilex_token');
+  document.getElementById('auth-view').style.display = 'block';
+  document.getElementById('dashboard-view').style.display = 'none';
+}
+
+async function api(path) {
+  const res = await fetch(API + path, { headers: { 'Authorization': 'Bearer ' + token } });
+  if (res.status === 401) { logout(); return null; }
+  return res.ok ? res.json() : null;
+}
+
+async function showDashboard(user, team) {
+  document.getElementById('auth-view').style.display = 'none';
+  document.getElementById('dashboard-view').style.display = 'block';
+  document.getElementById('user-email').textContent = (user || {}).email || '';
+  const planEl = document.getElementById('team-plan');
+  const plan = (team || {}).plan || 'free';
+  planEl.textContent = plan.toUpperCase();
+  planEl.className = 'badge ' + plan;
+  loadScans();
+}
+
+async function loadScans() {
+  const scans = await api('/api/scans');
+  const tbody = document.getElementById('scans-table');
+  const empty = document.getElementById('scans-empty');
+  if (!scans || scans.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  let totalFindings = 0, totalCritical = 0, totalHigh = 0;
+  scans.forEach(s => { totalFindings += s.findings_count; totalCritical += s.critical_count; totalHigh += s.high_count; });
+
+  document.getElementById('scan-stats').innerHTML =
+    `<div class="card stat"><div class="value">${scans.length}</div><div class="label">Total Scans</div></div>` +
+    `<div class="card stat"><div class="value">${totalFindings}</div><div class="label">Total Findings</div></div>` +
+    `<div class="card stat critical"><div class="value">${totalCritical}</div><div class="label">Critical</div></div>` +
+    `<div class="card stat high"><div class="value">${totalHigh}</div><div class="label">High</div></div>`;
+
+  tbody.innerHTML = scans.map(s =>
+    `<tr><td>${s.project_name}</td><td>${s.findings_count}</td>` +
+    `<td><span class="badge critical">${s.critical_count}</span></td>` +
+    `<td><span class="badge high">${s.high_count}</span></td>` +
+    `<td>${s.files_scanned}</td><td>${s.duration_ms}ms</td>` +
+    `<td>${new Date(s.created_at).toLocaleDateString()}</td></tr>`
+  ).join('');
+}
+
+async function loadTeam() {
+  const members = await api('/api/teams/members');
+  if (!members) return;
+  document.getElementById('team-table').innerHTML = members.map(m =>
+    `<tr><td>${m.name}</td><td>${m.email}</td><td>${m.role}</td><td>${new Date(m.created_at).toLocaleDateString()}</td></tr>`
+  ).join('');
+}
+
+async function loadKeys() {
+  const keys = await api('/api/keys');
+  if (!keys) return;
+  document.getElementById('keys-table').innerHTML = keys.map(k =>
+    `<tr><td>${k.name}</td><td>${k.last_used || 'Never'}</td><td>${new Date(k.created_at).toLocaleDateString()}</td>` +
+    `<td><button class="btn btn-outline" onclick="deleteKey('${k.id}')">Delete</button></td></tr>`
+  ).join('');
+}
+
+async function createKey() {
+  const name = prompt('Key name:');
+  if (!name) return;
+  const res = await fetch(API + '/api/keys', {
+    method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  if (res.ok) {
+    const data = await res.json();
+    alert('API Key created (copy now, it will not be shown again):\n\n' + data.key);
+    loadKeys();
+  }
+}
+
+async function deleteKey(id) {
+  if (!confirm('Delete this API key?')) return;
+  await fetch(API + '/api/keys/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+  loadKeys();
+}
+
+function showTab(name) {
+  ['scans', 'team', 'keys', 'billing'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('nav a').forEach((a, i) => {
+    a.className = ['scans', 'team', 'keys', 'billing'][i] === name ? 'active' : '';
+  });
+  if (name === 'team') loadTeam();
+  if (name === 'keys') loadKeys();
+  if (name === 'billing') loadBilling();
+}
+
+async function loadBilling() {
+  const sub = await api('/api/billing/subscription');
+  if (!sub) return;
+  document.getElementById('billing-info').innerHTML =
+    `<p>Current plan: <strong>${sub.plan.toUpperCase()}</strong></p>` +
+    (sub.status ? `<p>Status: ${sub.status}</p>` : '') +
+    (sub.current_period_end ? `<p>Renews: ${new Date(sub.current_period_end).toLocaleDateString()}</p>` : '');
+}
+
+async function upgrade() {
+  const res = await fetch(API + '/api/billing/checkout', {
+    method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ price_id: 'price_pro_monthly', success_url: window.location.href, cancel_url: window.location.href })
+  });
+  if (res.ok) { const data = await res.json(); window.location.href = data.url; }
+}
+
+async function manageSubscription() {
+  const res = await fetch(API + '/api/billing/portal', {
+    method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+  });
+  if (res.ok) { const data = await res.json(); window.location.href = data.url; }
+}
+
+// Init
+if (token) {
+  (async () => {
+    const team = await api('/api/teams/current');
+    if (team) showDashboard(null, team);
+    else logout();
+  })();
+} else {
+  document.getElementById('auth-view').style.display = 'block';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+[package]
+name = "piilex-lsp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = ["lang-all"]
+lang-all = ["piilex-core/lang-all"]
+lang-web = ["piilex-core/lang-web"]
+
+[dependencies]
+piilex-core = { path = "../piilex-core", default-features = false }
+lsp-server = { workspace = true }
+lsp-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

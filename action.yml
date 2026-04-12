@@ -1,0 +1,197 @@
+name: "piilex scan"
+description: "Scan source code for PII and map findings to regulatory frameworks (GDPR, CCPA)"
+author: "piilex"
+
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  path:
+    description: "Path to scan (directory or file)"
+    required: false
+    default: "."
+  framework:
+    description: "Regulatory framework(s): gdpr, ccpa (comma-separated)"
+    required: false
+    default: ""
+  severity:
+    description: "Minimum severity to report: low, medium, high, critical"
+    required: false
+    default: "low"
+  fail-on:
+    description: "Fail the step if findings at this severity or above: low, medium, high, critical"
+    required: false
+    default: ""
+  output:
+    description: "Output format: table, json, sarif"
+    required: false
+    default: "table"
+  baseline:
+    description: "Path to baseline JSON for diff scanning"
+    required: false
+    default: ""
+  save-baseline:
+    description: "Path to save current scan as baseline"
+    required: false
+    default: ""
+  config:
+    description: "Path to .piilex.yml config file"
+    required: false
+    default: ".piilex.yml"
+  version:
+    description: "piilex version to use (e.g., v0.1.0, latest)"
+    required: false
+    default: "latest"
+  sarif-file:
+    description: "File path for SARIF output (used with output=sarif)"
+    required: false
+    default: "piilex-results.sarif"
+  upload-sarif:
+    description: "Upload SARIF to GitHub Code Scanning (true/false)"
+    required: false
+    default: "true"
+
+outputs:
+  findings-count:
+    description: "Total number of findings"
+    value: ${{ steps.scan.outputs.findings-count }}
+  sarif-file:
+    description: "Path to SARIF output file (if generated)"
+    value: ${{ steps.scan.outputs.sarif-file }}
+  exit-code:
+    description: "Exit code from piilex (0=pass, 1=findings above threshold)"
+    value: ${{ steps.scan.outputs.exit-code }}
+
+runs:
+  using: "composite"
+  steps:
+    # -- Install piilex ----------------------------------------
+    - name: Install piilex
+      id: install
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+
+        # Check if piilex is already built (local action test)
+        if [ -f "./target/release/piilex" ]; then
+          echo "Using locally built piilex"
+          echo "bin=./target/release/piilex" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        if [ -f "./target/release/piilex.exe" ]; then
+          echo "Using locally built piilex.exe"
+          echo "bin=./target/release/piilex.exe" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # Determine platform
+        case "$RUNNER_OS" in
+          Linux)   TARGET="x86_64-unknown-linux-gnu"   ; EXT="tar.gz" ;;
+          macOS)   TARGET="x86_64-apple-darwin"         ; EXT="tar.gz" ;;
+          Windows) TARGET="x86_64-pc-windows-msvc"      ; EXT="zip"    ;;
+          *)       echo "Unsupported OS: $RUNNER_OS"; exit 1 ;;
+        esac
+
+        # Resolve version
+        if [ "$VERSION" = "latest" ]; then
+          VERSION=$(gh release view --repo piilex/piilex --json tagName -q .tagName 2>/dev/null || echo "v0.1.0")
+        fi
+
+        DOWNLOAD_URL="https://github.com/piilex/piilex/releases/download/${VERSION}/piilex-${VERSION}-${TARGET}.${EXT}"
+        echo "Downloading piilex ${VERSION} for ${TARGET}..."
+
+        INSTALL_DIR="${RUNNER_TEMP}/piilex-bin"
+        mkdir -p "$INSTALL_DIR"
+
+        if [ "$EXT" = "tar.gz" ]; then
+          curl -sSfL "$DOWNLOAD_URL" | tar xz -C "$INSTALL_DIR"
+        else
+          curl -sSfL "$DOWNLOAD_URL" -o "${INSTALL_DIR}/piilex.zip"
+          unzip -q "${INSTALL_DIR}/piilex.zip" -d "$INSTALL_DIR"
+          rm "${INSTALL_DIR}/piilex.zip"
+        fi
+
+        chmod +x "$INSTALL_DIR/piilex"* 2>/dev/null || true
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+        echo "bin=${INSTALL_DIR}/piilex" >> "$GITHUB_OUTPUT"
+
+    # -- Run scan ----------------------------------------------
+    - name: Run piilex scan
+      id: scan
+      shell: bash
+      run: |
+        PIILEX="${{ steps.install.outputs.bin }}"
+        ARGS="scan ${{ inputs.path }}"
+
+        # Framework
+        if [ -n "${{ inputs.framework }}" ]; then
+          ARGS="$ARGS --framework ${{ inputs.framework }}"
+        fi
+
+        # Severity filter
+        ARGS="$ARGS --severity ${{ inputs.severity }}"
+
+        # Config file
+        if [ -f "${{ inputs.config }}" ]; then
+          ARGS="$ARGS --config ${{ inputs.config }}"
+        fi
+
+        # Baseline diff
+        if [ -n "${{ inputs.baseline }}" ] && [ -f "${{ inputs.baseline }}" ]; then
+          ARGS="$ARGS --baseline ${{ inputs.baseline }}"
+        fi
+
+        # Save baseline
+        if [ -n "${{ inputs.save-baseline }}" ]; then
+          ARGS="$ARGS --save-baseline ${{ inputs.save-baseline }}"
+        fi
+
+        # Fail-on threshold
+        if [ -n "${{ inputs.fail-on }}" ]; then
+          ARGS="$ARGS --fail-on ${{ inputs.fail-on }}"
+        fi
+
+        # Determine output mode
+        OUTPUT_FORMAT="${{ inputs.output }}"
+
+        # For SARIF, we run twice: once for console, once for file
+        if [ "$OUTPUT_FORMAT" = "sarif" ]; then
+          # Console output (table)
+          echo "::group::PII Scan Results (table)"
+          "$PIILEX" $ARGS --output table 2>&1 || true
+          echo "::endgroup::"
+
+          # SARIF file output
+          SARIF_FILE="${{ inputs.sarif-file }}"
+          "$PIILEX" $ARGS --output sarif > "$SARIF_FILE" 2>/dev/null
+          SCAN_EXIT=$?
+
+          echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
+        else
+          # Normal output
+          "$PIILEX" $ARGS --output "$OUTPUT_FORMAT"
+          SCAN_EXIT=$?
+        fi
+
+        # Count findings from JSON
+        FINDINGS_JSON=$("$PIILEX" scan ${{ inputs.path }} \
+          ${{ inputs.framework && format('--framework {0}', inputs.framework) }} \
+          --severity ${{ inputs.severity }} \
+          --output json 2>/dev/null || echo '{"findings":[]}')
+        COUNT=$(echo "$FINDINGS_JSON" | grep -c '"pii_type"' || echo "0")
+
+        echo "findings-count=$COUNT" >> "$GITHUB_OUTPUT"
+        echo "exit-code=$SCAN_EXIT" >> "$GITHUB_OUTPUT"
+
+        # Propagate exit code
+        exit $SCAN_EXIT
+
+    # -- Upload SARIF to GitHub Code Scanning -----------------
+    - name: Upload SARIF
+      if: inputs.output == 'sarif' && inputs.upload-sarif == 'true' && always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+        category: piilex
+      continue-on-error: true  # Don't fail if Code Scanning is not enabled

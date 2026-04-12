@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>piilex - Pricing</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333; }
+    .hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 80px 20px; text-align: center; }
+    .hero h1 { font-size: 48px; margin-bottom: 16px; }
+    .hero p { font-size: 20px; opacity: 0.85; max-width: 600px; margin: 0 auto 32px; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+    .pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin: -60px auto 60px; position: relative; z-index: 1; }
+    .plan { background: white; border-radius: 12px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; }
+    .plan.featured { border: 2px solid #4361ee; transform: scale(1.05); }
+    .plan h2 { font-size: 24px; margin-bottom: 8px; }
+    .plan .price { font-size: 48px; font-weight: 700; margin: 16px 0; }
+    .plan .price span { font-size: 18px; font-weight: 400; color: #666; }
+    .plan .period { font-size: 14px; color: #666; margin-bottom: 24px; }
+    .plan ul { list-style: none; text-align: left; margin-bottom: 24px; }
+    .plan li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 15px; }
+    .plan li:before { content: "✓ "; color: #4361ee; font-weight: 600; }
+    .plan li.no:before { content: "— "; color: #ccc; }
+    .plan li.no { color: #999; }
+    .btn { display: inline-block; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; width: 100%; }
+    .btn-primary { background: #4361ee; color: white; }
+    .btn-primary:hover { background: #3451d1; }
+    .btn-outline { background: white; color: #4361ee; border: 2px solid #4361ee; }
+    .features { padding: 60px 20px; background: #f9f9f9; }
+    .features h2 { text-align: center; font-size: 32px; margin-bottom: 40px; }
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; }
+    .feature { background: white; padding: 24px; border-radius: 8px; }
+    .feature h3 { font-size: 18px; margin-bottom: 8px; }
+    .feature p { font-size: 14px; color: #666; line-height: 1.5; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #4361ee; color: white; margin-bottom: 8px; }
+    footer { text-align: center; padding: 40px; color: #999; font-size: 14px; }
+    .cta-install { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin-top: 24px; font-family: monospace; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="container">
+      <h1>piilex</h1>
+      <p>Detect PII in your source code. Map findings to GDPR, CCPA, and APPI. Ship compliant software.</p>
+      <div class="cta-install">
+        <code>brew install piilex/tap/piilex && piilex scan ./src</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="pricing">
+      <!-- Free -->
+      <div class="plan">
+        <h2>Free</h2>
+        <div class="price">$0</div>
+        <div class="period">forever</div>
+        <ul>
+          <li>50+ PII type detection</li>
+          <li>6 languages (TS, JS, Py, Go, Java, C#)</li>
+          <li>Data flow tracing</li>
+          <li>Cross-file analysis</li>
+          <li>JSON and SARIF output</li>
+          <li>3 fix suggestions per day</li>
+          <li class="no">Regulatory mapping</li>
+          <li class="no">Compliance reports</li>
+          <li class="no">Baseline diff scanning</li>
+        </ul>
+        <a href="https://github.com/piilex/piilex#install" class="btn btn-outline">Install Free</a>
+      </div>
+
+      <!-- Pro -->
+      <div class="plan featured">
+        <span class="badge">Most Popular</span>
+        <h2>Pro</h2>
+        <div class="price">$15<span>/mo</span></div>
+        <div class="period">per developer, billed monthly ($149/yr)</div>
+        <ul>
+          <li>Everything in Free, plus:</li>
+          <li>GDPR article mapping</li>
+          <li>CCPA section mapping</li>
+          <li>APPI + My Number Act mapping</li>
+          <li>Compliance reports (HTML, Markdown)</li>
+          <li>Unlimited fix suggestions</li>
+          <li>Baseline diff scanning</li>
+          <li>Web dashboard</li>
+        </ul>
+        <button class="btn btn-primary" onclick="checkout('price_pro_monthly')">Start Pro Trial</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="container">
+      <h2>Why piilex?</h2>
+      <div class="feature-grid">
+        <div class="feature">
+          <h3>50+ PII Types</h3>
+          <p>Detects email, phone, SSN, credit card, My Number (Japan), IBAN, biometric data, and 40+ more types across all major languages.</p>
+        </div>
+        <div class="feature">
+          <h3>Data Flow Tracing</h3>
+          <p>Tracks PII from input to output: logs, databases, APIs, HTTP responses. Cross-file import/export tracking included.</p>
+        </div>
+        <div class="feature">
+          <h3>Regulatory Mapping</h3>
+          <p>Maps each finding to specific GDPR articles, CCPA sections, and APPI provisions. Article-by-article compliance reports for auditors.</p>
+        </div>
+        <div class="feature">
+          <h3>CI/CD Ready</h3>
+          <p>SARIF output for GitHub Code Scanning. --fail-on exit codes. GitHub Action available. Baseline diff shows only new issues.</p>
+        </div>
+        <div class="feature">
+          <h3>Fast</h3>
+          <p>Built in Rust with tree-sitter AST parsing. 4.6MB binary. Scans thousands of files in seconds.</p>
+        </div>
+        <div class="feature">
+          <h3>VS Code Extension</h3>
+          <p>Real-time PII detection with inline warnings and quick-fix code actions as you type.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Apache-2.0 License | <a href="https://github.com/piilex/piilex">GitHub</a> | <a href="https://github.com/piilex/piilex/blob/main/README.md">Docs</a></p>
+  </footer>
+
+  <script>
+    const API = window.location.origin;
+
+    async function checkout(priceId) {
+      const token = localStorage.getItem('piilex_token');
+      if (!token) {
+        window.location.href = 'index.html';
+        return;
+      }
+      const res = await fetch(API + '/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price_id: priceId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        window.location.href = data.checkout_url;
+      } else if (res.status === 401) {
+        window.location.href = 'index.html';
+      } else {
+        alert('Failed to start checkout. Please try again.');
+      }
+    }
+  </script>
+</body>
+</html>

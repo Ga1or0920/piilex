@@ -1,0 +1,49 @@
+{
+  "name": "piilex",
+  "displayName": "piilex - PII Scanner",
+  "description": "Detect PII in source code and map to GDPR, CCPA, APPI regulatory frameworks",
+  "version": "0.1.0",
+  "publisher": "piilex",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/piilex/piilex"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": ["Linters", "Other"],
+  "keywords": ["pii", "privacy", "gdpr", "ccpa", "appi", "security", "scanner", "compliance"],
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:python",
+    "onLanguage:go",
+    "onLanguage:java",
+    "onLanguage:csharp"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "piilex",
+      "properties": {
+        "piilex.path": {
+          "type": "string",
+          "default": "piilex",
+          "description": "Path to the piilex binary"
+        },
+        "piilex.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable piilex scanning"
+        },
+        "piilex.severity": {
+          "type": "string",
+          "default": "low",
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "Minimum severity to display"
+        }
+      }
+    }
+  }
+}

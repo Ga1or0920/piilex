@@ -1,0 +1,33 @@
+[package]
+name = "piilex-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "piilex"
+path = "src/main.rs"
+
+[features]
+default = ["lang-all"]
+lang-all = ["piilex-core/lang-all", "piilex-lsp/lang-all"]
+lang-web = ["piilex-core/lang-web", "piilex-lsp/lang-web"]
+
+[dependencies]
+piilex-core = { path = "../piilex-core", default-features = false }
+piilex-license = { path = "../piilex-license" }
+piilex-lsp = { path = "../piilex-lsp", default-features = false }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tabled = { workspace = true }
+console = { workspace = true }
+indicatif = { workspace = true }
+
+[dev-dependencies]
+assert_cmd = { workspace = true }
+predicates = { workspace = true }
+tempfile = { workspace = true }
+insta = { workspace = true }

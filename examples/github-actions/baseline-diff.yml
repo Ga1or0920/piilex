@@ -1,0 +1,36 @@
+# Example: Baseline diff scanning
+# Only fails on NEW findings - existing ones are tracked separately
+
+name: PII Diff Scan
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  pii-diff:
+    name: PII Diff (baseline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Restore baseline from the base branch
+      - name: Checkout baseline
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: base-branch
+
+      - name: Restore baseline
+        run: |
+          if [ -f base-branch/.piilex-baseline.json ]; then
+            cp base-branch/.piilex-baseline.json .piilex-baseline.json
+          fi
+
+      - name: Run PII diff scan
+        uses: piilex/scan@v1
+        with:
+          path: src/
+          framework: gdpr
+          baseline: .piilex-baseline.json
+          fail-on: high

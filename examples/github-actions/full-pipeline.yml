@@ -1,0 +1,105 @@
+# Example: Full PII compliance pipeline
+# - Scans on every PR
+# - Updates baseline on merge to main
+# - Generates compliance reports weekly
+
+name: PII Compliance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 9 * * 1"  # Weekly on Monday 9:00 UTC
+
+jobs:
+  # -- PR scan: diff against baseline -------------------
+  pr-scan:
+    name: PR PII Check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: piilex-baseline
+          path: .
+        continue-on-error: true  # First run won't have a baseline
+
+      - name: Scan with baseline diff
+        id: scan
+        uses: piilex/scan@v1
+        with:
+          path: src/
+          framework: gdpr,ccpa
+          baseline: piilex-baseline.json
+          fail-on: high
+          output: sarif
+
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const count = '${{ steps.scan.outputs.findings-count }}';
+            const exit = '${{ steps.scan.outputs.exit-code }}';
+            const icon = exit === '0' ? 'PASS' : 'WARN';
+            const body = `${icon} **PII Scan**: ${count} finding(s) detected\n\nSee the [Code Scanning tab](${context.payload.pull_request.html_url}/checks) for details.`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body,
+            });
+
+  # -- Main: update baseline ----------------------------
+  update-baseline:
+    name: Update Baseline
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate new baseline
+        uses: piilex/scan@v1
+        with:
+          path: src/
+          framework: gdpr,ccpa
+          save-baseline: piilex-baseline.json
+          output: table
+
+      - name: Upload baseline artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: piilex-baseline
+          path: piilex-baseline.json
+          retention-days: 90
+
+  # -- Weekly: compliance report -------------------------
+  compliance-report:
+    name: Weekly Report
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install piilex
+        uses: piilex/scan@v1
+        with:
+          path: src/
+          framework: gdpr,ccpa
+          output: sarif
+          sarif-file: compliance-report.sarif
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-report-${{ github.run_number }}
+          path: compliance-report.sarif
+          retention-days: 365
