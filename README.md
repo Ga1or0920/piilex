@@ -468,6 +468,12 @@ cargo build --release --no-default-features --features lang-web  # 5.1 MB
 bash scripts/benchmark.sh 1000
 ```
 
+## Community
+
+- [GitHub Discussions](https://github.com/Ga1or0920/piilex/discussions) -- Questions, ideas, show and tell
+- [Discord](https://discord.gg/yTfQme2t) -- Real-time chat and support
+- [Issue Tracker](https://github.com/Ga1or0920/piilex/issues) -- Bug reports and feature requests
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, PR guidelines, and how to add new PII types or languages.
