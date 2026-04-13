@@ -4,6 +4,8 @@ pub struct FrameworkMapper {
     gdpr_rules: Vec<FrameworkRule>,
     ccpa_rules: Vec<FrameworkRule>,
     appi_rules: Vec<FrameworkRule>,
+    hipaa_rules: Vec<FrameworkRule>,
+    pci_dss_rules: Vec<FrameworkRule>,
 }
 
 struct FrameworkRule {
@@ -22,6 +24,12 @@ enum RuleTrigger {
     JapanSpecificPii,
     /// Triggers on biometric data
     BiometricPii,
+    /// Triggers on health/medical PII (PHI)
+    HealthPii,
+    /// Triggers on payment card / financial PII
+    PaymentPii,
+    /// Triggers on any authentication credential
+    CredentialPii,
 }
 
 impl Default for FrameworkMapper {
@@ -179,6 +187,105 @@ impl FrameworkMapper {
                     recommendation: "Implement necessary measures to prevent leakage, loss, or damage of Individual Numbers per My Number Act Art.12",
                 },
             ],
+
+            // ── HIPAA ───────────────────────────────────────────
+            hipaa_rules: vec![
+                FrameworkRule {
+                    article: "164.502(a)",
+                    title: "Uses and Disclosures of PHI",
+                    trigger: RuleTrigger::HealthPii,
+                    risk: "Protected Health Information (PHI) detected in code",
+                    recommendation: "Ensure PHI is used only for permitted purposes (treatment, payment, operations) per HIPAA 164.502(a)",
+                },
+                FrameworkRule {
+                    article: "164.312(a)(1)",
+                    title: "Access Control",
+                    trigger: RuleTrigger::HealthPii,
+                    risk: "PHI may be accessible without proper access controls",
+                    recommendation: "Implement technical safeguards to restrict PHI access to authorized users per HIPAA 164.312(a)(1)",
+                },
+                FrameworkRule {
+                    article: "164.312(a)(2)(iv)",
+                    title: "Encryption and Decryption",
+                    trigger: RuleTrigger::SinkType(FlowNodeKind::Database),
+                    risk: "PHI stored without encryption",
+                    recommendation: "Encrypt PHI at rest using AES-256 or equivalent per HIPAA 164.312(a)(2)(iv)",
+                },
+                FrameworkRule {
+                    article: "164.312(e)(1)",
+                    title: "Transmission Security",
+                    trigger: RuleTrigger::SinkType(FlowNodeKind::ThirdPartyApi),
+                    risk: "PHI may be transmitted without encryption",
+                    recommendation: "Encrypt PHI in transit (TLS 1.2+) per HIPAA 164.312(e)(1)",
+                },
+                FrameworkRule {
+                    article: "164.312(b)",
+                    title: "Audit Controls",
+                    trigger: RuleTrigger::SinkType(FlowNodeKind::LogOutput),
+                    risk: "PHI logged without audit controls -- may violate minimum necessary standard",
+                    recommendation: "Implement audit logging for PHI access and remove PHI from application logs per HIPAA 164.312(b)",
+                },
+                FrameworkRule {
+                    article: "164.514(a)",
+                    title: "De-identification Standard",
+                    trigger: RuleTrigger::SinkType(FlowNodeKind::Response),
+                    risk: "PHI returned in API response without de-identification",
+                    recommendation: "Apply Safe Harbor or Expert Determination de-identification before exposing health data per HIPAA 164.514(a)",
+                },
+                FrameworkRule {
+                    article: "164.530(c)",
+                    title: "Administrative Safeguards",
+                    trigger: RuleTrigger::AnySensitiveData,
+                    risk: "Sensitive data handling detected -- ensure workforce training and policies are in place",
+                    recommendation: "Maintain documented policies and train workforce on PHI handling per HIPAA 164.530(c)",
+                },
+            ],
+
+            // ── PCI-DSS ─────────────────────────────────────────
+            pci_dss_rules: vec![
+                FrameworkRule {
+                    article: "Req 3.4",
+                    title: "Render PAN Unreadable",
+                    trigger: RuleTrigger::PaymentPii,
+                    risk: "Primary Account Number (PAN) or payment data detected in code",
+                    recommendation: "Render PAN unreadable anywhere it is stored (truncation, hashing, tokenization, or encryption) per PCI-DSS Req 3.4",
+                },
+                FrameworkRule {
+                    article: "Req 3.3",
+                    title: "Mask PAN When Displayed",
+                    trigger: RuleTrigger::SinkType(FlowNodeKind::Response),
+                    risk: "Payment card data may be displayed without masking",
+                    recommendation: "Mask PAN when displayed (show only first 6 and last 4 digits) per PCI-DSS Req 3.3",
+                },
+                FrameworkRule {
+                    article: "Req 3.2",
+                    title: "Do Not Store Sensitive Authentication Data",
+                    trigger: RuleTrigger::CredentialPii,
+                    risk: "Sensitive authentication data (CVV, PIN, full track data) must not be stored after authorization",
+                    recommendation: "Never store CVV, PIN, or full track data after transaction authorization per PCI-DSS Req 3.2",
+                },
+                FrameworkRule {
+                    article: "Req 4.1",
+                    title: "Encrypt Cardholder Data in Transit",
+                    trigger: RuleTrigger::SinkType(FlowNodeKind::ThirdPartyApi),
+                    risk: "Cardholder data may be transmitted without strong encryption",
+                    recommendation: "Use TLS 1.2+ for all transmission of cardholder data over open networks per PCI-DSS Req 4.1",
+                },
+                FrameworkRule {
+                    article: "Req 3.5",
+                    title: "Protect Encryption Keys",
+                    trigger: RuleTrigger::SinkType(FlowNodeKind::LogOutput),
+                    risk: "Payment data or encryption keys may be leaked to logs",
+                    recommendation: "Never log cardholder data or cryptographic keys. Implement log filtering per PCI-DSS Req 3.5",
+                },
+                FrameworkRule {
+                    article: "Req 6.5",
+                    title: "Address Common Coding Vulnerabilities",
+                    trigger: RuleTrigger::SinkType(FlowNodeKind::Database),
+                    risk: "Cardholder data stored in database -- ensure encryption at rest",
+                    recommendation: "Encrypt stored cardholder data and use parameterized queries per PCI-DSS Req 6.5",
+                },
+            ],
         }
     }
 
@@ -188,6 +295,10 @@ impl FrameworkMapper {
                 Framework::Gdpr => self.apply_rules(finding, &self.gdpr_rules, Framework::Gdpr),
                 Framework::Ccpa => self.apply_rules(finding, &self.ccpa_rules, Framework::Ccpa),
                 Framework::Appi => self.apply_rules(finding, &self.appi_rules, Framework::Appi),
+                Framework::Hipaa => self.apply_rules(finding, &self.hipaa_rules, Framework::Hipaa),
+                Framework::PciDss => {
+                    self.apply_rules(finding, &self.pci_dss_rules, Framework::PciDss)
+                }
             }
         }
     }
@@ -236,6 +347,35 @@ impl FrameworkMapper {
             RuleTrigger::BiometricPii => matches!(
                 finding.pii_type,
                 PiiType::Biometric | PiiType::Fingerprint | PiiType::FaceImage
+            ),
+            RuleTrigger::HealthPii => matches!(
+                finding.pii_type,
+                PiiType::HealthData
+                    | PiiType::MedicalRecord
+                    | PiiType::Diagnosis
+                    | PiiType::Prescription
+                    | PiiType::PatientId
+                    | PiiType::InsuranceClaimId
+                    | PiiType::LabResult
+            ),
+            RuleTrigger::PaymentPii => matches!(
+                finding.pii_type,
+                PiiType::CreditCard
+                    | PiiType::BankAccount
+                    | PiiType::Iban
+                    | PiiType::CardToken
+                    | PiiType::MerchantId
+                    | PiiType::PaymentAccount
+                    | PiiType::BankRoutingNumber
+                    | PiiType::SwiftCode
+            ),
+            RuleTrigger::CredentialPii => matches!(
+                finding.pii_type,
+                PiiType::Password
+                    | PiiType::AuthToken
+                    | PiiType::ApiKey
+                    | PiiType::PrivateKey
+                    | PiiType::SecretKey
             ),
         }
     }

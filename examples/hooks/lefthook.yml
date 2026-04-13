@@ -1,0 +1,10 @@
+# lefthook.yml - piilex pre-commit integration
+# Install lefthook: npm install lefthook --save-dev
+# Add to package.json scripts: "prepare": "lefthook install"
+
+pre-commit:
+  commands:
+    pii-scan:
+      glob: "*.{ts,tsx,js,jsx,py,go,java,cs}"
+      run: piilex scan --staged --fail-on high --quiet
+      fail_text: "PII findings detected. Review with: piilex scan --staged"

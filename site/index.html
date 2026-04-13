@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>piilex - PII Scanner for Source Code | GDPR, CCPA, APPI Compliance</title>
+  <meta name="description" content="Detect personally identifiable information in TypeScript, JavaScript, Python, Go, Java, and C# code. Map findings to GDPR, CCPA, and APPI regulatory articles. Free CLI tool.">
+  <meta name="keywords" content="PII scanner, GDPR compliance, CCPA compliance, APPI, personal data detection, source code security, static analysis, data privacy, code scanner">
+  <meta name="author" content="piilex">
+  <link rel="canonical" href="https://piilex.dev/">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://piilex.dev/">
+  <meta property="og:title" content="piilex - PII Scanner for Source Code">
+  <meta property="og:description" content="Detect PII in source code and map to GDPR, CCPA, APPI. 50+ PII types, 6 languages, real-time VS Code integration.">
+  <meta property="og:image" content="https://piilex.dev/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="piilex">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="piilex - PII Scanner for Source Code">
+  <meta name="twitter:description" content="Detect PII in source code and map to GDPR, CCPA, APPI. 50+ PII types, 6 languages.">
+  <meta name="twitter:image" content="https://piilex.dev/assets/og-image.png">
+
+  <!-- JSON-LD structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "piilex",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Windows, macOS, Linux",
+    "description": "PII Lexical Analyzer - Detect personally identifiable information in source code and map to regulatory frameworks",
+    "url": "https://piilex.dev",
+    "downloadUrl": "https://github.com/piilex/piilex/releases",
+    "softwareVersion": "0.1.0",
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "offers": [
+      {
+        "@type": "Offer",
+        "name": "Free",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      {
+        "@type": "Offer",
+        "name": "Pro",
+        "price": "15",
+        "priceCurrency": "USD",
+        "billingIncrement": "P1M"
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root { --blue: #4361ee; --dark: #1a1a2e; --gray: #666; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333; line-height: 1.6; }
+    a { color: var(--blue); text-decoration: none; }
+
+    /* Nav */
+    nav { background: var(--dark); padding: 12px 0; position: sticky; top: 0; z-index: 100; }
+    nav .container { display: flex; justify-content: space-between; align-items: center; }
+    nav .logo { color: white; font-size: 20px; font-weight: 700; }
+    nav .links { display: flex; gap: 24px; }
+    nav .links a { color: rgba(255,255,255,0.8); font-size: 14px; }
+    nav .links a:hover { color: white; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+    /* Hero */
+    .hero { background: linear-gradient(135deg, var(--dark) 0%, #16213e 100%); color: white; padding: 100px 20px 80px; text-align: center; }
+    .hero h1 { font-size: 52px; margin-bottom: 16px; line-height: 1.1; }
+    .hero h1 span { color: var(--blue); }
+    .hero p { font-size: 20px; opacity: 0.85; max-width: 650px; margin: 0 auto 32px; }
+    .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px; }
+    .btn { display: inline-block; padding: 14px 28px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-primary { background: var(--blue); color: white; }
+    .btn-primary:hover { background: #3451d1; }
+    .btn-outline { background: transparent; color: white; border: 2px solid rgba(255,255,255,0.4); }
+    .btn-outline:hover { border-color: white; }
+    .hero-code { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 16px 24px; max-width: 500px; margin: 0 auto; font-family: 'SF Mono', Monaco, monospace; font-size: 15px; text-align: left; }
+    .hero-code .prompt { color: #888; }
+    .hero-code .cmd { color: #8be9fd; }
+
+    /* Stats */
+    .stats-bar { background: white; border-bottom: 1px solid #eee; padding: 24px 0; }
+    .stats-bar .container { display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; }
+    .stat-item { text-align: center; }
+    .stat-item .num { font-size: 28px; font-weight: 700; color: var(--dark); }
+    .stat-item .label { font-size: 13px; color: var(--gray); }
+
+    /* Features */
+    .features { padding: 80px 20px; }
+    .features h2 { text-align: center; font-size: 36px; margin-bottom: 48px; color: var(--dark); }
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+    .feature { background: #f9f9f9; padding: 28px; border-radius: 12px; }
+    .feature h3 { font-size: 18px; margin-bottom: 8px; color: var(--dark); }
+    .feature p { font-size: 14px; color: var(--gray); }
+    .feature .icon { font-size: 28px; margin-bottom: 12px; }
+
+    /* Terminal demo */
+    .demo { background: var(--dark); padding: 80px 20px; color: white; }
+    .demo h2 { text-align: center; font-size: 36px; margin-bottom: 40px; }
+    .terminal { background: #0d1117; border-radius: 12px; padding: 24px; max-width: 750px; margin: 0 auto; font-family: 'SF Mono', Monaco, monospace; font-size: 13px; line-height: 1.7; overflow-x: auto; }
+    .terminal .g { color: #7ee787; }
+    .terminal .r { color: #f85149; }
+    .terminal .y { color: #d29922; }
+    .terminal .b { color: #58a6ff; }
+    .terminal .d { color: #484f58; }
+
+    /* Pricing */
+    .pricing-section { padding: 80px 20px; background: #f5f5f5; }
+    .pricing-section h2 { text-align: center; font-size: 36px; margin-bottom: 48px; }
+    .pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; max-width: 700px; margin: 0 auto; }
+    .plan { background: white; border-radius: 12px; padding: 32px; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .plan.featured { border: 2px solid var(--blue); }
+    .plan h3 { font-size: 24px; margin-bottom: 8px; }
+    .plan .price { font-size: 48px; font-weight: 700; margin: 12px 0; }
+    .plan .price span { font-size: 18px; font-weight: 400; color: var(--gray); }
+    .plan ul { list-style: none; text-align: left; margin: 20px 0; }
+    .plan li { padding: 6px 0; font-size: 14px; }
+    .plan li::before { content: "# "; color: var(--blue); font-weight: 700; }
+    .plan li.no::before { content: "  "; }
+    .plan li.no { color: #bbb; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; background: var(--blue); color: white; margin-bottom: 8px; }
+
+    /* Footer */
+    footer { background: var(--dark); color: rgba(255,255,255,0.6); padding: 40px 20px; text-align: center; font-size: 14px; }
+    footer a { color: rgba(255,255,255,0.8); }
+    footer .links { margin-top: 12px; display: flex; gap: 24px; justify-content: center; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="/" class="logo">piilex</a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="https://github.com/piilex/piilex">GitHub</a>
+      <a href="https://github.com/piilex/piilex#readme">Docs</a>
+      <a href="/app/" class="btn btn-primary" style="padding:8px 16px;font-size:13px;">Dashboard</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <h1>Detect <span>PII</span> in Your Code</h1>
+    <p>Scan TypeScript, JavaScript, Python, Go, Java, and C# for personally identifiable information. Map findings to GDPR, CCPA, and APPI articles.</p>
+    <div class="hero-cta">
+      <a href="https://github.com/piilex/piilex#install" class="btn btn-primary">Install Free</a>
+      <a href="#pricing" class="btn btn-outline">View Plans</a>
+    </div>
+    <div class="hero-code">
+      <div><span class="prompt">$</span> <span class="cmd">brew install piilex/tap/piilex</span></div>
+      <div><span class="prompt">$</span> <span class="cmd">piilex scan ./src --framework gdpr</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="stats-bar">
+  <div class="container">
+    <div class="stat-item"><div class="num">50+</div><div class="label">PII Types</div></div>
+    <div class="stat-item"><div class="num">6</div><div class="label">Languages</div></div>
+    <div class="stat-item"><div class="num">3</div><div class="label">Frameworks</div></div>
+    <div class="stat-item"><div class="num">5 MB</div><div class="label">Binary Size</div></div>
+    <div class="stat-item"><div class="num">&lt;1s</div><div class="label">Scan Speed</div></div>
+  </div>
+</div>
+
+<section class="features" id="features">
+  <div class="container">
+    <h2>Built for Privacy-Aware Development</h2>
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="icon">&#128269;</div>
+        <h3>50+ PII Types</h3>
+        <p>Email, phone, SSN, credit card, My Number (Japan), IBAN (EU), biometric data, health records, API keys, and more.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">&#128300;</div>
+        <h3>Data Flow Tracing</h3>
+        <p>Tracks PII from user input to logs, databases, third-party APIs, and HTTP responses. Cross-file import/export analysis.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">&#128220;</div>
+        <h3>Regulatory Mapping</h3>
+        <p>Maps each finding to specific GDPR articles, CCPA sections, and APPI provisions. Generate auditor-ready compliance reports.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">&#9889;</div>
+        <h3>CI/CD Integration</h3>
+        <p>SARIF output for GitHub Code Scanning. --fail-on exit codes for CI gates. GitHub Action and baseline diff scanning.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">&#128187;</div>
+        <h3>VS Code Extension</h3>
+        <p>Real-time PII detection with inline warnings and quick-fix code actions as you type. LSP-based, works with any editor.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">&#128640;</div>
+        <h3>Fast and Portable</h3>
+        <p>Built in Rust with tree-sitter AST parsing. Single 5 MB binary. No runtime dependencies. Runs on Linux, macOS, Windows.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="demo">
+  <div class="container">
+    <h2>See It in Action</h2>
+    <div class="terminal">
+<span class="d">$</span> piilex scan ./src --framework gdpr
+<br><br>
+<span class="b">  PII Scan Results -- 15 finding(s) in 8 file(s) (0.3s)</span>
+<br><br>
+  SEVERITY   TYPE             FILE                          LINE   DATA FLOW
+  <span class="d">----------------------------------------------------------------------</span>
+  <span class="r">critical</span>   password         src/auth/login.ts             9      --  <span class="d">[Art.25]</span>
+  <span class="r">critical</span>   credit_card      src/billing/charge.ts         10     --  <span class="d">[Art.25]</span>
+  <span class="r">critical</span>   national_id      src/models/user.ts            34     --  <span class="d">[Art.25, MyNumber Act Art.9]</span>
+  <span class="y">high</span>       email            src/api/handler.ts            13     user_input -> log_output <span class="d">[Art.5(1f)]</span>
+  <span class="y">high</span>       full_name        src/api/handler.ts            18     user_input -> database <span class="d">[Art.30]</span>
+  <span class="y">high</span>       email            src/api/handler.ts            23     user_input -> third_party_api <span class="d">[Art.13, Art.44]</span>
+<br>
+  <span class="b">Summary:</span>
+    <span class="r">critical: 3</span>  <span class="y">high: 9</span>  medium: 3  low: 0
+    Frameworks: GDPR
+    </div>
+  </div>
+</section>
+
+<section class="pricing-section" id="pricing">
+  <div class="container">
+    <h2>Simple Pricing</h2>
+    <div class="pricing">
+      <div class="plan">
+        <h3>Free</h3>
+        <div class="price">$0</div>
+        <ul>
+          <li>50+ PII type detection</li>
+          <li>6 languages</li>
+          <li>Data flow tracing</li>
+          <li>JSON / SARIF output</li>
+          <li>3 fix suggestions/day</li>
+          <li class="no">Regulatory mapping</li>
+          <li class="no">Compliance reports</li>
+          <li class="no">Baseline diff</li>
+        </ul>
+        <a href="https://github.com/piilex/piilex#install" class="btn btn-primary" style="width:100%">Install Free</a>
+      </div>
+      <div class="plan featured">
+        <span class="badge">Recommended</span>
+        <h3>Pro</h3>
+        <div class="price">$15<span>/mo</span></div>
+        <ul>
+          <li>Everything in Free</li>
+          <li>GDPR / CCPA / APPI mapping</li>
+          <li>Compliance reports</li>
+          <li>Unlimited suggestions</li>
+          <li>Baseline diff scanning</li>
+          <li>Web dashboard</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="/app/" class="btn btn-primary" style="width:100%">Start Pro Trial</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>piilex -- PII Lexical Analyzer | Apache-2.0 License</p>
+    <div class="links">
+      <a href="https://github.com/piilex/piilex">GitHub</a>
+      <a href="https://github.com/piilex/piilex#readme">Documentation</a>
+      <a href="https://github.com/piilex/piilex/issues">Issues</a>
+      <a href="/app/">Dashboard</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+name: False Positive Report
+description: Report a PII finding that should not be flagged
+title: "[False Positive]: "
+labels: ["false-positive", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve detection accuracy by reporting false positives.
+
+  - type: input
+    id: pii-type
+    attributes:
+      label: PII type reported
+      description: The `pii_type` from the finding (e.g., email, phone_number, password)
+      placeholder: phone_number
+    validations:
+      required: true
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - TypeScript
+        - JavaScript
+        - Python
+        - Go
+        - Java
+        - C#
+    validations:
+      required: true
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Code that triggered the false positive
+      description: Paste the minimal code that causes the incorrect detection
+      render: typescript
+    validations:
+      required: true
+
+  - type: textarea
+    id: why-false
+    attributes:
+      label: Why is this a false positive?
+      description: Explain why this code should not be flagged
+      placeholder: "The variable `phone_number_count` is a counter, not an actual phone number."
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: piilex version
+      placeholder: "piilex 0.1.0"
+    validations:
+      required: true

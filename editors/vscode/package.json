@@ -1,22 +1,48 @@
 {
   "name": "piilex",
   "displayName": "piilex - PII Scanner",
-  "description": "Detect PII in source code and map to GDPR, CCPA, APPI regulatory frameworks",
+  "description": "Detect PII in source code and map to GDPR, CCPA, APPI regulatory frameworks. Real-time scanning with 50+ PII types across 6 languages.",
   "version": "0.1.0",
   "publisher": "piilex",
   "license": "Apache-2.0",
+  "icon": "assets/icon.png",
+  "galleryBanner": {
+    "color": "#1a1a2e",
+    "theme": "dark"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/piilex/piilex"
   },
+  "homepage": "https://github.com/piilex/piilex#readme",
+  "bugs": {
+    "url": "https://github.com/piilex/piilex/issues"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },
-  "categories": ["Linters", "Other"],
-  "keywords": ["pii", "privacy", "gdpr", "ccpa", "appi", "security", "scanner", "compliance"],
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "pii",
+    "privacy",
+    "gdpr",
+    "ccpa",
+    "appi",
+    "security",
+    "scanner",
+    "compliance",
+    "data-protection",
+    "personal-data"
+  ],
   "activationEvents": [
     "onLanguage:typescript",
+    "onLanguage:typescriptreact",
     "onLanguage:javascript",
+    "onLanguage:javascriptreact",
     "onLanguage:python",
     "onLanguage:go",
     "onLanguage:java",
@@ -24,26 +50,57 @@
   ],
   "main": "./src/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "piilex.showStatus",
+        "title": "piilex: Show Status"
+      },
+      {
+        "command": "piilex.scanWorkspace",
+        "title": "piilex: Scan Workspace"
+      },
+      {
+        "command": "piilex.enable",
+        "title": "piilex: Enable"
+      },
+      {
+        "command": "piilex.disable",
+        "title": "piilex: Disable"
+      }
+    ],
     "configuration": {
       "title": "piilex",
       "properties": {
         "piilex.path": {
           "type": "string",
           "default": "piilex",
-          "description": "Path to the piilex binary"
+          "description": "Path to the piilex binary. If not absolute, searches in PATH.",
+          "scope": "machine-overridable"
         },
         "piilex.enable": {
           "type": "boolean",
           "default": true,
-          "description": "Enable/disable piilex scanning"
+          "description": "Enable or disable piilex PII scanning."
         },
         "piilex.severity": {
           "type": "string",
           "default": "low",
           "enum": ["low", "medium", "high", "critical"],
-          "description": "Minimum severity to display"
+          "enumDescriptions": [
+            "Show all findings",
+            "Show medium, high, and critical",
+            "Show high and critical only",
+            "Show critical only"
+          ],
+          "description": "Minimum severity level to display as diagnostics."
         }
       }
     }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.0"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.0.0"
   }
 }

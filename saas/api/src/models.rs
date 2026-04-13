@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct Team {
     pub id: String,
     pub name: String,
@@ -9,7 +9,7 @@ pub struct Team {
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct User {
     pub id: String,
     pub email: String,
@@ -19,40 +19,40 @@ pub struct User {
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct Scan {
     pub id: String,
     pub team_id: String,
     pub user_id: Option<String>,
     pub project_name: String,
-    pub files_scanned: i64,
-    pub findings_count: i64,
-    pub critical_count: i64,
-    pub high_count: i64,
-    pub medium_count: i64,
-    pub low_count: i64,
+    pub files_scanned: i32,
+    pub findings_count: i32,
+    pub critical_count: i32,
+    pub high_count: i32,
+    pub medium_count: i32,
+    pub low_count: i32,
     pub frameworks: Option<String>,
-    pub duration_ms: i64,
+    pub duration_ms: i32,
     pub pii_type_summary: Option<String>,
     pub language_summary: Option<String>,
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct ScanFinding {
     pub id: String,
     pub scan_id: String,
     pub pii_type: String,
     pub severity: String,
     pub file_path: String,
-    pub line: i64,
+    pub line: i32,
     pub code_snippet: Option<String>,
     pub data_flow: Option<String>,
     pub framework_mappings: Option<String>,
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct ApiKey {
     pub id: String,
     pub user_id: String,
@@ -63,7 +63,7 @@ pub struct ApiKey {
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct Subscription {
     pub id: String,
     pub team_id: String,
@@ -100,14 +100,14 @@ pub struct AuthResponse {
 #[derive(Debug, Deserialize)]
 pub struct CreateScanRequest {
     pub project_name: String,
-    pub files_scanned: i64,
-    pub findings_count: i64,
-    pub critical_count: i64,
-    pub high_count: i64,
-    pub medium_count: i64,
-    pub low_count: i64,
+    pub files_scanned: i32,
+    pub findings_count: i32,
+    pub critical_count: i32,
+    pub high_count: i32,
+    pub medium_count: i32,
+    pub low_count: i32,
     pub frameworks: Option<Vec<String>>,
-    pub duration_ms: i64,
+    pub duration_ms: i32,
     pub pii_type_summary: Option<serde_json::Value>,
     pub language_summary: Option<serde_json::Value>,
     pub findings: Option<Vec<CreateFindingRequest>>,
@@ -118,7 +118,7 @@ pub struct CreateFindingRequest {
     pub pii_type: String,
     pub severity: String,
     pub file_path: String,
-    pub line: i64,
+    pub line: i32,
     pub code_snippet: Option<String>,
     pub data_flow: Option<serde_json::Value>,
     pub framework_mappings: Option<serde_json::Value>,

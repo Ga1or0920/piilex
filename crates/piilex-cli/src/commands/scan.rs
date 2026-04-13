@@ -6,9 +6,8 @@ use std::time::Instant;
 
 use piilex_core::config::Config;
 use piilex_core::detector::DetectorPipeline;
-use piilex_core::discovery::{detect_language, FileDiscovery};
+use piilex_core::discovery::FileDiscovery;
 use piilex_core::finding::{FindingSet, Framework, ScanMetadata};
-use piilex_core::parser::{parse_file, ParsedFile};
 use piilex_core::severity::Severity;
 use piilex_license::{require_pro, resolve_license, ProFeature};
 
@@ -89,6 +88,47 @@ pub struct ScanArgs {
         help = "Save scan results as baseline JSON for future diff comparisons"
     )]
     pub save_baseline: Option<PathBuf>,
+
+    /// Upload scan results to piilex dashboard
+    #[arg(
+        long,
+        help = "Upload results to the piilex SaaS dashboard after scanning"
+    )]
+    pub upload: bool,
+
+    /// Project name for dashboard upload
+    #[arg(
+        long,
+        value_name = "NAME",
+        help = "Project name (used with --upload). Defaults to directory name"
+    )]
+    pub project: Option<String>,
+
+    /// SaaS API URL (for --upload)
+    #[arg(
+        long,
+        value_name = "URL",
+        env = "PIILEX_API_URL",
+        default_value = "http://localhost:3001",
+        help = "piilex SaaS API URL"
+    )]
+    pub api_url: String,
+
+    /// API key for dashboard authentication (for --upload)
+    #[arg(
+        long,
+        value_name = "KEY",
+        env = "PIILEX_API_KEY",
+        help = "API key for SaaS dashboard"
+    )]
+    pub api_key: Option<String>,
+
+    /// Scan only git-staged files (for pre-commit hooks)
+    #[arg(
+        long,
+        help = "Scan only files staged in git (git diff --cached --name-only)"
+    )]
+    pub staged: bool,
 }
 
 #[derive(Clone, Debug, clap::ValueEnum)]
@@ -153,7 +193,28 @@ pub fn execute(args: ScanArgs) -> Result<()> {
 
     let discovery =
         FileDiscovery::new(&config.scan).context("Failed to initialize file discovery")?;
-    let result = discovery.discover(&scan_path);
+    let mut result = discovery.discover(&scan_path);
+
+    // Filter to staged files only (for pre-commit hooks)
+    if args.staged {
+        let staged = get_staged_files(&scan_path);
+        if staged.is_empty() {
+            if !args.quiet {
+                eprintln!("  {} No staged files to scan.", style("OK").green().bold());
+            }
+            return Ok(());
+        }
+        result
+            .files
+            .retain(|f| staged.iter().any(|s| f.ends_with(s) || f == s));
+        if !args.quiet {
+            eprintln!(
+                "  {} Scanning {} staged file(s)",
+                style("->").dim(),
+                result.files.len()
+            );
+        }
+    }
 
     if result.files.is_empty() {
         if !args.quiet {
@@ -166,79 +227,26 @@ pub fn execute(args: ScanArgs) -> Result<()> {
         return Ok(());
     }
 
-    // ─── Phase 1: Parse all files ───────────────────────────────────
+    // ─── Phase 1: Parse all files (parallel via rayon) ────────────
     let file_count = result.files.len();
-    let use_progress = file_count >= 20 && !args.quiet && console::Term::stderr().is_term();
+    let _mem_before = piilex_core::parallel::memory_usage_bytes();
 
-    let progress = if use_progress {
-        let pb = indicatif::ProgressBar::new(file_count as u64);
-        pb.set_style(
-            indicatif::ProgressStyle::with_template(
-                "  {spinner:.cyan} Parsing [{bar:30.cyan/dim}] {pos}/{len} files ({eta})",
-            )
-            .unwrap()
-            .progress_chars("##-"),
+    if !args.quiet && file_count >= 20 {
+        eprintln!(
+            "  {} Parsing {} files (parallel)...",
+            style("->").dim(),
+            file_count
         );
-        pb.enable_steady_tick(std::time::Duration::from_millis(120));
-        Some(pb)
-    } else {
-        None
-    };
-
-    let mut parsed_files: Vec<ParsedFile> = Vec::new();
-    let mut parse_skipped = 0;
-    let mut all_warnings = Vec::new();
-
-    for file_path in &result.files {
-        if let Some(ref pb) = progress {
-            let name = file_path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("?");
-            pb.set_message(name.to_string());
-        }
-
-        let source = match std::fs::read_to_string(file_path) {
-            Ok(s) => s,
-            Err(e) => {
-                all_warnings.push(format!("{}: failed to read: {}", file_path.display(), e));
-                parse_skipped += 1;
-                if let Some(ref pb) = progress {
-                    pb.inc(1);
-                }
-                continue;
-            }
-        };
-
-        let language = match detect_language(file_path) {
-            Some(l) => l,
-            None => {
-                if let Some(ref pb) = progress {
-                    pb.inc(1);
-                }
-                continue;
-            }
-        };
-
-        let parsed = parse_file(file_path, &source, language);
-
-        // Collect parse warnings
-        for w in &parsed.warnings {
-            all_warnings.push(format!("{}", w));
-        }
-
-        parsed_files.push(parsed);
-
-        if let Some(ref pb) = progress {
-            pb.inc(1);
-        }
     }
 
-    if let Some(pb) = progress {
-        pb.finish_and_clear();
-    }
+    let parse_result =
+        piilex_core::parallel::parse_files_parallel(&result.files, config.scan.max_file_size);
 
-    // Display parse warnings (after progress bar is cleared)
+    let parsed_files = parse_result.files;
+    let parse_skipped = parse_result.skipped;
+    let all_warnings = parse_result.warnings;
+
+    // Display parse warnings
     if !all_warnings.is_empty() && !args.quiet {
         let shown = all_warnings.len().min(10);
         eprintln!(
@@ -302,6 +310,9 @@ pub fn execute(args: ScanArgs) -> Result<()> {
     let min_severity: Severity = args.severity.parse().unwrap_or(Severity::Low);
     all_findings.retain(|f| f.severity >= min_severity);
 
+    // Filter out low-confidence findings by default (reduces noise)
+    all_findings.retain(|f| f.confidence != piilex_core::finding::Confidence::Low);
+
     // Sort by severity (descending), then file, then line
     all_findings.sort_by(|a, b| {
         b.severity
@@ -323,37 +334,37 @@ pub fn execute(args: ScanArgs) -> Result<()> {
         },
     };
 
-    // ─── Telemetry ───────────────────────────────────────────────────
-    {
-        use std::collections::HashMap;
-        let mut pii_counts: HashMap<String, usize> = HashMap::new();
-        let mut lang_counts: HashMap<String, usize> = HashMap::new();
-        for f in &finding_set.findings {
-            *pii_counts
-                .entry(f.pii_type.as_str().to_string())
-                .or_default() += 1;
-        }
-        for pf in &parsed_files {
-            *lang_counts
-                .entry(pf.language.as_str().to_string())
-                .or_default() += 1;
-        }
-        let fw_names: Vec<String> = config
-            .frameworks
-            .iter()
-            .map(|f| f.as_str().to_string())
-            .collect();
-        piilex_core::telemetry::record_scan_event(&piilex_core::telemetry::ScanEventParams {
-            files_scanned: parsed_files.len(),
-            findings_count: finding_set.findings.len(),
-            pii_type_counts: &pii_counts,
-            language_counts: &lang_counts,
-            duration_ms: duration.as_millis() as u64,
-            frameworks: &fw_names,
-            used_baseline: args.baseline.is_some(),
-            used_crossfile: is_multi_file,
-        });
+    // ─── Compute stats (shared by telemetry + upload) ─────────────
+    use std::collections::HashMap;
+    let mut pii_counts: HashMap<String, usize> = HashMap::new();
+    let mut lang_counts: HashMap<String, usize> = HashMap::new();
+    for f in &finding_set.findings {
+        *pii_counts
+            .entry(f.pii_type.as_str().to_string())
+            .or_default() += 1;
     }
+    for pf in &parsed_files {
+        *lang_counts
+            .entry(pf.language.as_str().to_string())
+            .or_default() += 1;
+    }
+    let fw_names: Vec<String> = config
+        .frameworks
+        .iter()
+        .map(|f| f.as_str().to_string())
+        .collect();
+
+    // ─── Telemetry ───────────────────────────────────────────────────
+    piilex_core::telemetry::record_scan_event(&piilex_core::telemetry::ScanEventParams {
+        files_scanned: parsed_files.len(),
+        findings_count: finding_set.findings.len(),
+        pii_type_counts: &pii_counts,
+        language_counts: &lang_counts,
+        duration_ms: duration.as_millis() as u64,
+        frameworks: &fw_names,
+        used_baseline: args.baseline.is_some(),
+        used_crossfile: is_multi_file,
+    });
 
     // ─── Save baseline if requested ─────────────────────────────────
     if let Some(ref save_path) = args.save_baseline {
@@ -426,6 +437,47 @@ pub fn execute(args: ScanArgs) -> Result<()> {
         }
     }
 
+    // ─── Upload to dashboard ───────────────────────────────────────
+    if args.upload {
+        let api_key = args.api_key.as_deref().unwrap_or("");
+        if api_key.is_empty() {
+            eprintln!(
+                "{} --upload requires --api-key or PIILEX_API_KEY environment variable",
+                style("Error:").red().bold()
+            );
+            std::process::exit(1);
+        }
+
+        let project_name = args
+            .project
+            .clone()
+            .or_else(|| {
+                scan_path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(|s| s.to_string())
+            })
+            .unwrap_or_else(|| "unnamed".to_string());
+
+        let payload = piilex_core::upload::UploadPayload::from_finding_set(
+            &finding_set,
+            &project_name,
+            &lang_counts,
+        );
+
+        eprintln!("  {} Uploading to {}...", style("->").dim(), args.api_url);
+
+        match piilex_core::upload::upload_sync(&args.api_url, api_key, &payload) {
+            Ok(id) => {
+                eprintln!("  {} Uploaded (scan: {})", style("OK").green().bold(), id);
+            }
+            Err(e) => {
+                eprintln!("  {} Upload failed: {}", style("ERR").red(), e);
+                // Don't fail the scan on upload error
+            }
+        }
+    }
+
     // Determine exit code
     if let Some(fail_on_str) = &args.fail_on {
         let fail_severity: Severity = fail_on_str.parse().unwrap_or(Severity::High);
@@ -439,4 +491,21 @@ pub fn execute(args: ScanArgs) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Get the list of files staged in git (git diff --cached --name-only).
+fn get_staged_files(repo_root: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let output = std::process::Command::new("git")
+        .args(["diff", "--cached", "--name-only", "--diff-filter=ACMR"])
+        .current_dir(repo_root)
+        .output();
+
+    match output {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout)
+            .lines()
+            .filter(|l| !l.is_empty())
+            .map(|l| repo_root.join(l))
+            .collect(),
+        _ => Vec::new(),
+    }
 }

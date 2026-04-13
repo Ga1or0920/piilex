@@ -7,13 +7,17 @@ edition = "2021"
 name = "piilex-saas"
 path = "src/main.rs"
 
+[lib]
+name = "piilex_saas"
+path = "src/main.rs"
+
 [dependencies]
 axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.6", features = ["cors"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "chrono"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "sqlite", "any", "chrono"] }
 chrono = { version = "0.4", features = ["serde"] }
 sha2 = "0.10"
 hex = "0.4"
@@ -21,3 +25,9 @@ uuid = { version = "1", features = ["v4"] }
 jsonwebtoken = "9"
 reqwest = { version = "0.12", features = ["json"] }
 hmac = "0.12"
+lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "smtp-transport"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+hyper = "1"

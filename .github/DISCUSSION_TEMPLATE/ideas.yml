@@ -1,0 +1,21 @@
+title: "[Idea] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share an idea for a new feature, improvement, or integration.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+      description: Describe your idea
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: Who would benefit and how?

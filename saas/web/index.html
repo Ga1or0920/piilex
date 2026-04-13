@@ -89,6 +89,20 @@
     <!-- Scans Tab -->
     <div id="tab-scans">
       <div class="stats" id="scan-stats"></div>
+
+      <!-- Trend Charts -->
+      <div style="display:grid; grid-template-columns: 2fr 1fr; gap:16px; margin-bottom:16px;">
+        <div class="card">
+          <h2>Findings Trend (30 days)</h2>
+          <canvas id="trend-chart" height="200"></canvas>
+          <div id="trend-empty" class="empty" style="display:none;">Upload scans to see trends</div>
+        </div>
+        <div class="card">
+          <h2>PII Type Distribution</h2>
+          <div id="pii-dist"></div>
+        </div>
+      </div>
+
       <div class="card">
         <h2>Recent Scans</h2>
         <table>
@@ -190,6 +204,8 @@ async function showDashboard(user, team) {
   planEl.textContent = plan.toUpperCase();
   planEl.className = 'badge ' + plan;
   loadScans();
+  loadTrends();
+  loadPiiDistribution();
 }
 
 async function loadScans() {
@@ -215,6 +231,69 @@ async function loadScans() {
     `<td>${s.files_scanned}</td><td>${s.duration_ms}ms</td>` +
     `<td>${new Date(s.created_at).toLocaleDateString()}</td></tr>`
   ).join('');
+}
+
+async function loadTrends() {
+  const trends = await api('/api/scans/trends?days=30');
+  const canvas = document.getElementById('trend-chart');
+  const emptyEl = document.getElementById('trend-empty');
+  if (!trends || trends.length === 0) { emptyEl.style.display = 'block'; return; }
+  emptyEl.style.display = 'none';
+
+  // Simple canvas bar chart (no library needed)
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width = canvas.offsetWidth;
+  const h = canvas.height = 200;
+  ctx.clearRect(0, 0, w, h);
+
+  const maxFindings = Math.max(...trends.map(t => t.total_findings), 1);
+  const barWidth = Math.max(4, (w - 40) / trends.length - 2);
+
+  trends.forEach((t, i) => {
+    const x = 30 + i * (barWidth + 2);
+    const barH = (t.total_findings / maxFindings) * (h - 40);
+    const critH = (t.total_critical / maxFindings) * (h - 40);
+
+    // Total findings bar
+    ctx.fillStyle = '#4361ee44';
+    ctx.fillRect(x, h - 20 - barH, barWidth, barH);
+
+    // Critical overlay
+    ctx.fillStyle = '#d32f2f88';
+    ctx.fillRect(x, h - 20 - critH, barWidth, critH);
+  });
+
+  // Y-axis label
+  ctx.fillStyle = '#999';
+  ctx.font = '11px sans-serif';
+  ctx.fillText(maxFindings.toString(), 0, 15);
+  ctx.fillText('0', 0, h - 22);
+
+  // X-axis labels (first, middle, last)
+  if (trends.length > 0) {
+    ctx.fillText(trends[0].date.slice(5), 30, h - 5);
+    if (trends.length > 1)
+      ctx.fillText(trends[trends.length-1].date.slice(5), w - 50, h - 5);
+  }
+}
+
+async function loadPiiDistribution() {
+  const dist = await api('/api/scans/pii-distribution');
+  const el = document.getElementById('pii-dist');
+  if (!dist || dist.length === 0) { el.innerHTML = '<div class="empty">No data</div>'; return; }
+
+  const maxCount = Math.max(...dist.map(d => d.count), 1);
+  el.innerHTML = dist.slice(0, 10).map(d => {
+    const pct = Math.round((d.count / maxCount) * 100);
+    return `<div style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
+        <span>${d.pii_type}</span><span style="color:#999">${d.count}</span>
+      </div>
+      <div style="background:#eee;border-radius:3px;height:8px;margin-top:2px;">
+        <div style="background:#4361ee;border-radius:3px;height:8px;width:${pct}%"></div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function loadTeam() {

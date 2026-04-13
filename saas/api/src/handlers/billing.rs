@@ -217,12 +217,20 @@ pub async fn stripe_webhook(
 
         // Payment failed
         "invoice.payment_failed" => {
-            let customer = event.data.object["customer"].as_str().unwrap_or("");
-            eprintln!(
-                "Payment failed for customer {}: notify team",
-                customer
-            );
-            // In production: send email notification to team owner
+            let customer_id = event.data.object["customer"].as_str().unwrap_or("");
+            let reason = event.data.object["last_payment_error"]["message"]
+                .as_str()
+                .unwrap_or("Payment method declined");
+
+            eprintln!("Payment failed for customer {}: {}", customer_id, reason);
+
+            // Send notification to team owner
+            let state_for_email = state.clone();
+            let customer_owned = customer_id.to_string();
+            let reason_owned = reason.to_string();
+            tokio::spawn(async move {
+                send_payment_failed_email(&state_for_email, &customer_owned, &reason_owned).await;
+            });
         }
 
         _ => {
@@ -381,4 +389,38 @@ async fn get_stripe_customer(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(row.0)
+}
+
+async fn send_payment_failed_email(state: &AppState, stripe_customer_id: &str, reason: &str) {
+    // Find team + owner email
+    let team = sqlx::query_as::<_, (String, String)>(
+        "SELECT t.id, t.name FROM teams t WHERE t.stripe_customer_id = ?",
+    )
+    .bind(stripe_customer_id)
+    .fetch_optional(&state.db)
+    .await;
+
+    let (team_id, team_name) = match team {
+        Ok(Some(t)) => t,
+        _ => return,
+    };
+
+    let owner_email = sqlx::query_scalar::<_, String>(
+        "SELECT email FROM users WHERE team_id = ? AND role = 'owner' LIMIT 1",
+    )
+    .bind(&team_id)
+    .fetch_optional(&state.db)
+    .await;
+
+    let email = match owner_email {
+        Ok(Some(e)) => e,
+        _ => return,
+    };
+
+    let (subject, html) =
+        crate::email::templates::payment_failed(&team_name, reason, &state.base_url);
+
+    if let Err(e) = crate::email::send_email(&state.email_config, &email, &subject, &html).await {
+        eprintln!("Failed to send payment failed email: {}", e);
+    }
 }

@@ -1,0 +1,5 @@
+# Cloudflare Pages redirects
+/pricing    /index.html#pricing  301
+/docs       https://github.com/piilex/piilex#readme  302
+/github     https://github.com/piilex/piilex  302
+/install    https://github.com/piilex/piilex#install  302

@@ -12,3 +12,15 @@
 # OS
 .DS_Store
 Thumbs.db
+
+# VS Code extension build artifacts
+editors/vscode/node_modules/
+editors/vscode/*.vsix
+editors/vscode/package-lock.json
+
+# IntelliJ build
+editors/intellij/.gradle/
+editors/intellij/build/
+
+# SaaS dev database
+*.db

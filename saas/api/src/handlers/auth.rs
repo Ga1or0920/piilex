@@ -6,6 +6,21 @@ pub async fn signup(
     State(state): State<Arc<AppState>>,
     Json(req): Json<SignupRequest>,
 ) -> Result<Json<AuthResponse>, StatusCode> {
+    // Input validation
+    let email = req.email.trim().to_lowercase();
+    if email.is_empty() || !email.contains('@') || email.len() > 254 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    if req.name.trim().is_empty() || req.name.len() > 200 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    if req.team_name.trim().is_empty() || req.team_name.len() > 200 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    if req.password.len() < 8 || req.password.len() > 1000 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     let team_id = db::generate_id();
     let user_id = db::generate_id();
     let password_hash = db::hash_key(&req.password);
@@ -21,8 +36,8 @@ pub async fn signup(
     // Create user (store password hash in a separate field; for MVP we reuse key_hash pattern)
     sqlx::query("INSERT INTO users (id, email, name, team_id, role) VALUES (?, ?, ?, ?, 'owner')")
         .bind(&user_id)
-        .bind(&req.email)
-        .bind(&req.name)
+        .bind(&email)
+        .bind(req.name.trim())
         .bind(&team_id)
         .execute(&state.db)
         .await
@@ -70,14 +85,15 @@ pub async fn login(
         .ok_or(StatusCode::UNAUTHORIZED)?;
 
     // Verify password
-    let key_exists = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM api_keys WHERE user_id = ? AND name = '__password__' AND key_hash = ?",
+    let row = sqlx::query(
+        "SELECT COUNT(*) as cnt FROM api_keys WHERE user_id = ? AND name = '__password__' AND key_hash = ?",
     )
     .bind(&user.id)
     .bind(&password_hash)
     .fetch_one(&state.db)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let key_exists: i32 = sqlx::Row::try_get(&row, "cnt").unwrap_or(0);
 
     if key_exists == 0 {
         return Err(StatusCode::UNAUTHORIZED);

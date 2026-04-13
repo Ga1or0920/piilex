@@ -48,11 +48,23 @@ pub async fn invite_member(
         return Err(StatusCode::FORBIDDEN);
     }
 
+    // Input validation
+    let email = body.email.trim().to_lowercase();
+    if email.is_empty() || !email.contains('@') || email.len() > 254 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    if body.name.trim().is_empty() || body.name.len() > 200 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    if !matches!(body.role.as_str(), "owner" | "admin" | "member" | "viewer") {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     let user_id = db::generate_id();
     sqlx::query("INSERT INTO users (id, email, name, team_id, role) VALUES (?, ?, ?, ?, ?)")
         .bind(&user_id)
-        .bind(&body.email)
-        .bind(&body.name)
+        .bind(&email)
+        .bind(body.name.trim())
         .bind(&claims.team_id)
         .bind(&body.role)
         .execute(&state.db)

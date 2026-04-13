@@ -52,6 +52,7 @@ pub struct Cli {
 }
 
 #[derive(Subcommand)]
+#[allow(clippy::large_enum_variant)]
 pub enum Command {
     /// Scan source code for PII and data flow risks
     #[command(
@@ -176,6 +177,9 @@ CI/CD USAGE:
                       Communicates via stdin/stdout using the Language Server Protocol.\n\
                       Designed to be launched by VS Code, IntelliJ, or other LSP clients.")]
     Lsp,
+
+    /// Manage git pre-commit hooks
+    Hook(commands::hook::HookArgs),
 }
 
 pub fn run() -> Result<()> {
@@ -198,6 +202,7 @@ pub fn run() -> Result<()> {
         Command::License(_) => "license",
         Command::Telemetry(_) => "telemetry",
         Command::Lsp => "lsp",
+        Command::Hook(_) => "hook",
     };
     piilex_core::telemetry::record_command(cmd_name);
 
@@ -211,5 +216,6 @@ pub fn run() -> Result<()> {
         Command::Lsp => {
             piilex_lsp::run_server().map_err(|e| anyhow::anyhow!("LSP server error: {}", e))
         }
+        Command::Hook(args) => commands::hook::execute(args),
     }
 }

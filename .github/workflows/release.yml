@@ -223,3 +223,59 @@ jobs:
         run: npm publish ./npm --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ----------------------------------------------------
+  # Publish VS Code extension
+  # ----------------------------------------------------
+  vscode:
+    name: Publish VS Code
+    runs-on: ubuntu-latest
+    needs: [release]
+    if: ${{ !contains(github.ref_name, '-') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: cd editors/vscode && npm install
+
+      - name: Update version
+        run: |
+          cd editors/vscode
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Package and publish
+        run: cd editors/vscode && npx @vscode/vsce publish
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+  # ----------------------------------------------------
+  # Publish IntelliJ plugin
+  # ----------------------------------------------------
+  intellij:
+    name: Publish IntelliJ
+    runs-on: ubuntu-latest
+    needs: [release]
+    if: ${{ !contains(github.ref_name, '-') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Build plugin
+        run: cd editors/intellij && ./gradlew buildPlugin
+
+      - name: Publish to Marketplace
+        run: cd editors/intellij && ./gradlew publishPlugin
+        env:
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
+          CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}

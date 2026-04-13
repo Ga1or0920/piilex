@@ -1,11 +1,20 @@
+use crate::config::CustomSink;
 use crate::finding::{DataFlow, DataFlowNode, Finding, FlowNodeKind, SourceLocation};
 use crate::parser::ParsedFile;
+use regex::Regex;
 
 pub struct DataFlowAnalyzer {
     log_patterns: Vec<&'static str>,
     db_patterns: Vec<&'static str>,
     http_patterns: Vec<&'static str>,
     response_patterns: Vec<&'static str>,
+    custom_sinks: Vec<CompiledCustomSink>,
+}
+
+struct CompiledCustomSink {
+    regex: Regex,
+    kind: FlowNodeKind,
+    allowed: bool,
 }
 
 impl Default for DataFlowAnalyzer {
@@ -88,6 +97,36 @@ impl DataFlowAnalyzer {
                 "JsonResponse",
                 "jsonify",
             ],
+            custom_sinks: Vec::new(),
+        }
+    }
+
+    /// Load custom sink patterns from config.
+    pub fn load_custom_sinks(&mut self, sinks: &[CustomSink]) {
+        for sink in sinks {
+            let regex = match Regex::new(&sink.pattern) {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!(
+                        "Warning: invalid regex '{}' for custom sink: {}",
+                        sink.pattern, e
+                    );
+                    continue;
+                }
+            };
+            let kind = match sink.kind.as_str() {
+                "log_output" | "log" => FlowNodeKind::LogOutput,
+                "database" | "db" => FlowNodeKind::Database,
+                "third_party_api" | "api" | "http" => FlowNodeKind::ThirdPartyApi,
+                "response" | "res" => FlowNodeKind::Response,
+                "file_system" | "file" => FlowNodeKind::FileSystem,
+                _ => FlowNodeKind::ThirdPartyApi,
+            };
+            self.custom_sinks.push(CompiledCustomSink {
+                regex,
+                kind,
+                allowed: sink.allowed,
+            });
         }
     }
 
@@ -186,7 +225,24 @@ impl DataFlowAnalyzer {
             }
         }
 
+        // Check custom sinks
+        for custom in &self.custom_sinks {
+            if custom.regex.is_match(callee) {
+                if custom.allowed {
+                    return None; // Allowed sink: suppress the finding
+                }
+                return Some(custom.kind);
+            }
+        }
+
         None
+    }
+
+    /// Check if a callee matches an allowed custom sink.
+    pub fn is_allowed_sink(&self, callee: &str) -> bool {
+        self.custom_sinks
+            .iter()
+            .any(|s| s.allowed && s.regex.is_match(callee))
     }
 }
 

@@ -4,7 +4,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[derive(Deserialize)]
@@ -111,7 +111,68 @@ pub async fn create_scan(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    // Send email notification for critical/high findings (async, non-blocking)
+    if body.critical_count > 0 || body.high_count > 0 {
+        let state_clone = state.clone();
+        let project = body.project_name.clone();
+        let sid = scan_id.clone();
+        let fc = body.findings_count;
+        let cc = body.critical_count;
+        let hc = body.high_count;
+        let pii_summary = body.pii_type_summary.clone();
+        let user_id = claims.sub.clone();
+
+        tokio::spawn(async move {
+            send_scan_alert(&state_clone, &user_id, &project, &sid, fc, cc, hc, pii_summary).await;
+        });
+    }
+
     Ok((StatusCode::CREATED, Json(scan)))
+}
+
+async fn send_scan_alert(
+    state: &AppState,
+    user_id: &str,
+    project: &str,
+    scan_id: &str,
+    findings: i32,
+    critical: i32,
+    high: i32,
+    pii_summary: Option<serde_json::Value>,
+) {
+    // Get user email
+    let email = sqlx::query_scalar::<_, String>("SELECT email FROM users WHERE id = ?")
+        .bind(user_id)
+        .fetch_one(&state.db)
+        .await;
+
+    let email = match email {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    let top_types: Vec<(String, i32)> = pii_summary
+        .and_then(|v| serde_json::from_value::<std::collections::HashMap<String, i32>>(v).ok())
+        .map(|m| {
+            let mut v: Vec<_> = m.into_iter().collect();
+            v.sort_by(|a, b| b.1.cmp(&a.1));
+            v
+        })
+        .unwrap_or_default();
+
+    let (subject, html) = crate::email::templates::new_findings_alert(
+        project,
+        scan_id,
+        findings,
+        critical,
+        high,
+        &top_types,
+        &state.base_url,
+    );
+
+    if let Err(e) = crate::email::send_email(&state.email_config, &email, &subject, &html).await {
+        eprintln!("Failed to send scan alert email: {}", e);
+    }
 }
 
 pub async fn get_scan(
@@ -159,4 +220,88 @@ pub async fn get_findings(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(findings))
+}
+
+// ── Trend / analytics endpoints ──
+
+#[derive(Serialize, sqlx::FromRow)]
+pub struct TrendPoint {
+    pub date: String,
+    pub scan_count: i64,
+    pub total_findings: i64,
+    pub total_critical: i64,
+    pub total_high: i64,
+}
+
+pub async fn get_trends(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<TrendParams>,
+) -> Result<Json<Vec<TrendPoint>>, StatusCode> {
+    let claims = middleware::auth(&headers, &state.jwt_secret)?;
+    let days = params.days.unwrap_or(30).min(365);
+
+    let trends = sqlx::query_as::<_, TrendPoint>(
+        "SELECT \
+           DATE(created_at) as date, \
+           COUNT(*) as scan_count, \
+           SUM(findings_count) as total_findings, \
+           SUM(critical_count) as total_critical, \
+           SUM(high_count) as total_high \
+         FROM scans \
+         WHERE team_id = ? AND created_at >= DATE('now', '-' || ? || ' days') \
+         GROUP BY DATE(created_at) \
+         ORDER BY date ASC",
+    )
+    .bind(&claims.team_id)
+    .bind(days)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(trends))
+}
+
+#[derive(Deserialize)]
+pub struct TrendParams {
+    days: Option<i64>,
+}
+
+#[derive(Serialize)]
+pub struct PiiDistribution {
+    pub pii_type: String,
+    pub count: i64,
+}
+
+pub async fn get_pii_distribution(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<PiiDistribution>>, StatusCode> {
+    let claims = middleware::auth(&headers, &state.jwt_secret)?;
+
+    // Aggregate PII types from the 10 most recent scans
+    let scans = sqlx::query_scalar::<_, Option<String>>(
+        "SELECT pii_type_summary FROM scans WHERE team_id = ? ORDER BY created_at DESC LIMIT 10",
+    )
+    .bind(&claims.team_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut totals: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+    for summary in scans.into_iter().flatten() {
+        if let Ok(map) = serde_json::from_str::<std::collections::HashMap<String, i64>>(&summary) {
+            for (k, v) in map {
+                *totals.entry(k).or_default() += v;
+            }
+        }
+    }
+
+    let mut dist: Vec<PiiDistribution> = totals
+        .into_iter()
+        .map(|(pii_type, count)| PiiDistribution { pii_type, count })
+        .collect();
+    dist.sort_by(|a, b| b.count.cmp(&a.count));
+
+    Ok(Json(dist))
 }

@@ -25,7 +25,7 @@ impl DetectorPipeline {
         }
     }
 
-    /// Create a pipeline with custom PII types loaded from config.
+    /// Create a pipeline with custom PII types and rules loaded from config.
     pub fn with_config(config: &Config) -> Self {
         let mut pipeline = Self::new();
         if !config.pii_types.custom.is_empty() {
@@ -33,18 +33,62 @@ impl DetectorPipeline {
                 .identifier_detector
                 .load_custom(&config.pii_types.custom);
         }
+        if !config.rules.custom_sinks.is_empty() {
+            pipeline
+                .dataflow_analyzer
+                .load_custom_sinks(&config.rules.custom_sinks);
+        }
         pipeline
     }
 
     /// Single-file analysis (intra-file data flow only).
     pub fn analyze(&self, file: &ParsedFile, config: &Config) -> Vec<Finding> {
+        // Check path-based exceptions
+        if should_skip_file(&file.path, &config.rules.exceptions) {
+            return Vec::new();
+        }
+
         let mut findings = self.identifier_detector.detect(file);
         findings.extend(self.literal_detector.detect(file));
+
+        // Apply allow-list: remove findings whose identifier is explicitly allowed
+        if !config.rules.allow_identifiers.is_empty() {
+            findings.retain(|f| {
+                !config
+                    .rules
+                    .allow_identifiers
+                    .iter()
+                    .any(|allowed| f.code_snippet.contains(allowed))
+            });
+        }
+
+        // Apply ignore-list: remove findings matching ignore patterns (PII type names)
+        if !config.pii_types.ignore.is_empty() {
+            findings.retain(|f| {
+                !config
+                    .pii_types
+                    .ignore
+                    .iter()
+                    .any(|ignored| f.pii_type.as_str() == ignored)
+            });
+        }
+
+        // Apply severity cap from path-based exceptions
+        apply_severity_exceptions(&file.path, &config.rules.exceptions, &mut findings);
 
         // Layer 3: Data flow analysis for each finding
         for finding in &mut findings {
             finding.data_flow = self.dataflow_analyzer.trace(file, finding);
         }
+
+        // Remove findings whose data flow goes to an allowed sink
+        findings.retain(|f| {
+            if let Some(ref df) = f.data_flow {
+                !self.dataflow_analyzer.is_allowed_sink(&df.sink.label)
+            } else {
+                true
+            }
+        });
 
         // Layer 4: Regulatory framework mapping
         for fw in &config.frameworks {
@@ -112,4 +156,55 @@ impl Default for DetectorPipeline {
     fn default() -> Self {
         Self::new()
     }
+}
+
+// ---------------------------------------------------------------------------
+// Rule helpers
+// ---------------------------------------------------------------------------
+
+fn should_skip_file(path: &std::path::Path, exceptions: &[crate::config::ExceptionRule]) -> bool {
+    let path_str = path.to_string_lossy();
+    for rule in exceptions {
+        if rule.action == "skip" && matches_any_glob(&path_str, &rule.paths) {
+            return true;
+        }
+    }
+    false
+}
+
+fn apply_severity_exceptions(
+    path: &std::path::Path,
+    exceptions: &[crate::config::ExceptionRule],
+    findings: &mut Vec<Finding>,
+) {
+    let path_str = path.to_string_lossy();
+    for rule in exceptions {
+        if rule.action == "reduce_severity" && matches_any_glob(&path_str, &rule.paths) {
+            if let Some(ref max_sev_str) = rule.max_severity {
+                if let Ok(max_sev) = max_sev_str.parse::<crate::severity::Severity>() {
+                    for f in findings.iter_mut() {
+                        if f.severity > max_sev {
+                            f.severity = max_sev;
+                        }
+                    }
+                }
+            }
+        }
+        if rule.action == "suppress_low" && matches_any_glob(&path_str, &rule.paths) {
+            findings.retain(|f| f.severity > crate::severity::Severity::Low);
+        }
+    }
+}
+
+fn matches_any_glob(path: &str, patterns: &[String]) -> bool {
+    let path_normalized = path.replace('\\', "/");
+    for pattern in patterns {
+        if let Ok(glob) = globset::Glob::new(pattern) {
+            let matcher = glob.compile_matcher();
+            if matcher.is_match(&path_normalized) {
+                return true;
+            }
+        }
+    }
+    false
 }

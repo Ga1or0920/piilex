@@ -51,7 +51,10 @@ impl PiiDictionary {
                             r"(?i)^(mobile|cell|tel|telephone)[-_]?(number|num|no)?$",
                             Confidence::High,
                         ),
-                        pat(r"(?i)(phone|mobile|cell|tel)", Confidence::Medium),
+                        pat(
+                            r"(?i)(?:^|[-_])(phone|mobile|cell|tel(?:ephone)?)(?:[-_]|$)",
+                            Confidence::Medium,
+                        ),
                     ],
                     default_severity: Severity::High,
                     category: PiiCategory::ContactInfo,
@@ -458,6 +461,93 @@ impl PiiDictionary {
                     )],
                     default_severity: Severity::Critical,
                     category: PiiCategory::HealthInfo,
+                },
+                // ── Health: HIPAA-specific ──
+                DictionaryEntry {
+                    pii_type: PiiType::PatientId,
+                    patterns: vec![
+                        pat(r"(?i)^patient[-_]?(id|number|num|no)$", Confidence::High),
+                        pat(
+                            r"(?i)^(mrn|medical[-_]?record[-_]?number)$",
+                            Confidence::High,
+                        ),
+                    ],
+                    default_severity: Severity::Critical,
+                    category: PiiCategory::HealthInfo,
+                },
+                DictionaryEntry {
+                    pii_type: PiiType::InsuranceClaimId,
+                    patterns: vec![
+                        pat(
+                            r"(?i)^(insurance[-_]?)?claim[-_]?(id|number|num|no)$",
+                            Confidence::High,
+                        ),
+                        pat(
+                            r"(?i)^(member[-_]?id|subscriber[-_]?id|group[-_]?number)$",
+                            Confidence::High,
+                        ),
+                    ],
+                    default_severity: Severity::Critical,
+                    category: PiiCategory::HealthInfo,
+                },
+                DictionaryEntry {
+                    pii_type: PiiType::LabResult,
+                    patterns: vec![
+                        pat(
+                            r"(?i)^(lab[-_]?result|test[-_]?result|pathology[-_]?report)$",
+                            Confidence::High,
+                        ),
+                        pat(
+                            r"(?i)^(blood[-_]?type|hba1c|cholesterol|glucose[-_]?level)$",
+                            Confidence::High,
+                        ),
+                    ],
+                    default_severity: Severity::Critical,
+                    category: PiiCategory::HealthInfo,
+                },
+                // ── Payment: PCI-DSS-specific ──
+                DictionaryEntry {
+                    pii_type: PiiType::CardToken,
+                    patterns: vec![
+                        pat(
+                            r"(?i)^(card[-_]?token|payment[-_]?token|stripe[-_]?token)$",
+                            Confidence::High,
+                        ),
+                        pat(
+                            r"(?i)^(tokenized[-_]?card|card[-_]?nonce)$",
+                            Confidence::High,
+                        ),
+                    ],
+                    default_severity: Severity::High,
+                    category: PiiCategory::FinancialInfo,
+                },
+                DictionaryEntry {
+                    pii_type: PiiType::MerchantId,
+                    patterns: vec![
+                        pat(r"(?i)^merchant[-_]?(id|number|code)$", Confidence::High),
+                        pat(r"(?i)^(terminal[-_]?id|acquirer[-_]?id)$", Confidence::High),
+                    ],
+                    default_severity: Severity::High,
+                    category: PiiCategory::FinancialInfo,
+                },
+                DictionaryEntry {
+                    pii_type: PiiType::PaymentAccount,
+                    patterns: vec![
+                        pat(
+                            r"(?i)^(payment[-_]?account|billing[-_]?account|cardholder[-_]?name)$",
+                            Confidence::High,
+                        ),
+                        pat(
+                            r"(?i)^(cvv|cvc|cvv2|cid|security[-_]?code)$",
+                            Confidence::High,
+                        ),
+                        pat(
+                            r"(?i)^(expir(y|ation)[-_]?date|exp[-_]?month|exp[-_]?year)$",
+                            Confidence::High,
+                        ),
+                    ],
+                    default_severity: Severity::Critical,
+                    category: PiiCategory::FinancialInfo,
                 },
                 // ── Biometric ──
                 DictionaryEntry {

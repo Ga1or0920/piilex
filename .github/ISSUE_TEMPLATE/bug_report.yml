@@ -1,0 +1,100 @@
+name: Bug Report
+description: Report a bug in piilex
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill out the form below.
+
+  - type: input
+    id: version
+    attributes:
+      label: piilex version
+      description: Run `piilex --version` and paste the output
+      placeholder: "piilex 0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (x86_64)
+        - Linux (ARM64)
+        - Windows (x86_64)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Installation method
+      options:
+        - Homebrew
+        - npm (npx piilex)
+        - GitHub Release binary
+        - cargo install
+        - VS Code extension
+        - GitHub Action
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly and concisely
+      placeholder: When I run `piilex scan ./src`, it...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to reproduce the issue
+      value: |
+        1. Create a file `test.ts` with content:
+        ```typescript
+        // paste minimal code here
+        ```
+        2. Run: `piilex scan test.ts`
+        3. Observe: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Actual output
+      description: Paste the terminal output (use `piilex scan -o json` for machine-readable output)
+      render: shell
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: Contents of `.piilex.yml` if relevant
+      render: yaml
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true

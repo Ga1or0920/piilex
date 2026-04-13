@@ -1,0 +1,53 @@
+<idea-plugin>
+    <id>dev.piilex.intellij</id>
+    <name>piilex - PII Scanner</name>
+    <vendor email="support@piilex.dev" url="https://piilex.dev">piilex</vendor>
+
+    <description><![CDATA[
+        <h2>piilex - PII Scanner for JetBrains IDEs</h2>
+        <p>Detect personally identifiable information (PII) in your source code in real-time.</p>
+
+        <h3>Features</h3>
+        <ul>
+            <li><strong>50+ PII types</strong> - email, phone, SSN, credit card, My Number, IBAN, and more</li>
+            <li><strong>6 languages</strong> - TypeScript, JavaScript, Python, Go, Java, C#</li>
+            <li><strong>Data flow tracing</strong> - alerts when PII flows to logs, databases, or APIs</li>
+            <li><strong>Quick fixes</strong> - apply masking/redaction suggestions with Alt+Enter</li>
+            <li><strong>Regulatory mapping</strong> - GDPR, CCPA, APPI, HIPAA, PCI-DSS (Pro)</li>
+        </ul>
+
+        <h3>Requirements</h3>
+        <p>The <code>piilex</code> binary must be installed and available in PATH.</p>
+        <p>Install: <code>brew install piilex/tap/piilex</code> or <code>npm install -g piilex</code></p>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- LSP Server Descriptor -->
+        <lsp.serverSupportProvider
+            implementation="dev.piilex.intellij.PiilexLspServerSupportProvider"/>
+
+        <!-- Settings -->
+        <applicationConfigurable
+            parentId="tools"
+            instance="dev.piilex.intellij.PiilexSettingsConfigurable"
+            id="dev.piilex.intellij.settings"
+            displayName="piilex"/>
+
+        <applicationService
+            serviceImplementation="dev.piilex.intellij.PiilexSettings"/>
+
+        <!-- Notification group -->
+        <notificationGroup id="piilex" displayType="BALLOON"/>
+    </extensions>
+
+    <actions>
+        <action id="dev.piilex.intellij.ShowStatus"
+                class="dev.piilex.intellij.ShowStatusAction"
+                text="piilex: Show Status"
+                description="Show piilex scanner status">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>

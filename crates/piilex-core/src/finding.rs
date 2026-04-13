@@ -57,11 +57,18 @@ pub enum PiiType {
     ApiKey,
     PrivateKey,
     SecretKey,
-    // -- Health (4)
+    // -- Health (7)
     HealthData,
     MedicalRecord,
     Diagnosis,
     Prescription,
+    PatientId,
+    InsuranceClaimId,
+    LabResult,
+    // -- Payment (3)
+    CardToken,
+    MerchantId,
+    PaymentAccount,
     // -- Biometric / physical (3)
     Biometric,
     FaceImage,
@@ -122,6 +129,12 @@ impl PiiType {
             PiiType::MedicalRecord => "medical_record",
             PiiType::Diagnosis => "diagnosis",
             PiiType::Prescription => "prescription",
+            PiiType::PatientId => "patient_id",
+            PiiType::InsuranceClaimId => "insurance_claim_id",
+            PiiType::LabResult => "lab_result",
+            PiiType::CardToken => "card_token",
+            PiiType::MerchantId => "merchant_id",
+            PiiType::PaymentAccount => "payment_account",
             PiiType::Biometric => "biometric",
             PiiType::FaceImage => "face_image",
             PiiType::Fingerprint => "fingerprint",
@@ -241,6 +254,8 @@ pub enum Framework {
     Gdpr,
     Ccpa,
     Appi,
+    Hipaa,
+    PciDss,
 }
 
 impl Framework {
@@ -249,6 +264,8 @@ impl Framework {
             Framework::Gdpr => "gdpr",
             Framework::Ccpa => "ccpa",
             Framework::Appi => "appi",
+            Framework::Hipaa => "hipaa",
+            Framework::PciDss => "pci-dss",
         }
     }
 }
@@ -261,8 +278,10 @@ impl std::str::FromStr for Framework {
             "gdpr" => Ok(Framework::Gdpr),
             "ccpa" => Ok(Framework::Ccpa),
             "appi" => Ok(Framework::Appi),
+            "hipaa" => Ok(Framework::Hipaa),
+            "pci-dss" | "pcidss" | "pci_dss" => Ok(Framework::PciDss),
             _ => Err(format!(
-                "unknown framework: '{s}' (expected: gdpr, ccpa, appi)"
+                "unknown framework: '{s}' (expected: gdpr, ccpa, appi, hipaa, pci-dss)"
             )),
         }
     }

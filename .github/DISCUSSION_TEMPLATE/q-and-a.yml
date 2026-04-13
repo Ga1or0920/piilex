@@ -1,0 +1,25 @@
+title: "[Q&A] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask a question about using piilex. The community and maintainers will help.
+
+        Before asking, please check:
+        - [README](https://github.com/piilex/piilex#readme)
+        - [Existing Q&A discussions](https://github.com/piilex/piilex/discussions/categories/q-a)
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What would you like to know?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Any relevant details (version, OS, what you've tried)

@@ -37,25 +37,118 @@ pub struct SeverityConfig {
     pub min_display: Severity,
 }
 
+// ---------------------------------------------------------------------------
+// Rules: custom sinks, allow/deny, exceptions
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RulesConfig {
+    /// Paths where PII in logs is allowed (audit log sinks, etc.)
     #[serde(default)]
     pub allow_log: Vec<String>,
+
+    /// Finding IDs or patterns to suppress permanently
     #[serde(default)]
     pub ignore_findings: Vec<String>,
+
+    /// Custom sink definitions (extend built-in log/db/api/response sinks)
+    #[serde(default)]
+    pub custom_sinks: Vec<CustomSink>,
+
+    /// Allow-list: identifiers that should never be flagged as PII
+    #[serde(default)]
+    pub allow_identifiers: Vec<String>,
+
+    /// Deny-list: identifiers that should always be flagged (force detection)
+    #[serde(default)]
+    pub deny_identifiers: Vec<DenyRule>,
+
+    /// Path-based exceptions: skip scanning for certain directories/patterns
+    #[serde(default)]
+    pub exceptions: Vec<ExceptionRule>,
 }
 
-/// A user-defined custom PII type from .piilex.yml.
+/// A custom sink pattern: callee name/regex mapped to a sink type.
 ///
-/// Example in config:
 /// ```yaml
-/// pii_types:
-///   custom:
-///     - name: loyalty_card
-///       patterns:
-///         - "(?i)^loyalty[-_]?(card|id|number)$"
-///       severity: high
+/// rules:
+///   custom_sinks:
+///     - pattern: "analyticsClient.track"
+///       kind: third_party_api
+///     - pattern: "auditLog.*"
+///       kind: log_output
+///       allowed: true   # suppress findings for this sink
 /// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomSink {
+    /// Regex or literal pattern matching the callee (e.g., "myLogger.send")
+    pub pattern: String,
+    /// Sink kind: log_output, database, third_party_api, response, file_system
+    pub kind: String,
+    /// If true, findings flowing to this sink are suppressed
+    #[serde(default)]
+    pub allowed: bool,
+}
+
+/// Force-flag an identifier as PII, overriding the dictionary.
+///
+/// ```yaml
+/// rules:
+///   deny_identifiers:
+///     - pattern: "(?i)^customer[-_]?ref$"
+///       pii_type: national_id
+///       severity: critical
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DenyRule {
+    /// Regex pattern matching the identifier
+    pub pattern: String,
+    /// PII type to assign (e.g., "email", "national_id", or custom)
+    #[serde(default = "default_deny_pii_type")]
+    pub pii_type: String,
+    /// Severity override
+    #[serde(default)]
+    pub severity: Option<String>,
+}
+
+fn default_deny_pii_type() -> String {
+    "custom".to_string()
+}
+
+/// Path-based exception: skip or modify scanning for matching paths.
+///
+/// ```yaml
+/// rules:
+///   exceptions:
+///     - paths: ["generated/**", "proto/**"]
+///       action: skip
+///     - paths: ["**/migrations/**"]
+///       action: skip
+///     - paths: ["**/test/**", "**/__tests__/**"]
+///       action: reduce_severity
+///       max_severity: medium
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExceptionRule {
+    /// Glob patterns for file paths
+    pub paths: Vec<String>,
+    /// Action: "skip" (no scan), "reduce_severity", "suppress_low"
+    #[serde(default = "default_exception_action")]
+    pub action: String,
+    /// For "reduce_severity": cap findings at this level
+    #[serde(default)]
+    pub max_severity: Option<String>,
+}
+
+fn default_exception_action() -> String {
+    "skip".to_string()
+}
+
+// ---------------------------------------------------------------------------
+// PII types config
+// ---------------------------------------------------------------------------
+
+/// A user-defined custom PII type from .piilex.yml.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomPiiType {
     pub name: String,
@@ -71,6 +164,10 @@ pub struct PiiTypesConfig {
     #[serde(default)]
     pub ignore: Vec<String>,
 }
+
+// ---------------------------------------------------------------------------
+// Defaults
+// ---------------------------------------------------------------------------
 
 fn default_languages() -> Vec<String> {
     vec!["typescript".into(), "javascript".into(), "python".into()]
@@ -94,7 +191,7 @@ fn default_excludes() -> Vec<String> {
 }
 
 fn default_max_file_size() -> usize {
-    1_048_576 // 1 MB
+    1_048_576
 }
 
 fn default_fail_on() -> Severity {
@@ -132,7 +229,7 @@ impl Config {
         }
         let content =
             std::fs::read_to_string(path).map_err(|e| ConfigError::Io(path.to_path_buf(), e))?;
-        let config: Config = serde_yml::from_str(&content)
+        let config: Config = serde_yaml_ng::from_str(&content)
             .map_err(|e| ConfigError::Parse(path.to_path_buf(), e.to_string()))?;
         Ok(config)
     }
@@ -155,6 +252,7 @@ scan:
 frameworks: []
   # - gdpr
   # - ccpa
+  # - appi
 
 severity:
   fail_on: high
@@ -163,6 +261,33 @@ severity:
 rules:
   allow_log: []
   ignore_findings: []
+
+  # Custom sink patterns (extend built-in detection)
+  # custom_sinks:
+  #   - pattern: "analyticsClient.track"
+  #     kind: third_party_api
+  #   - pattern: "auditLog.write"
+  #     kind: log_output
+  #     allowed: true    # suppress findings for audit logs
+
+  # Identifiers that should never be flagged as PII
+  # allow_identifiers:
+  #   - "email_count"
+  #   - "phone_validator"
+
+  # Force-flag identifiers as PII (override dictionary)
+  # deny_identifiers:
+  #   - pattern: "(?i)^customer[-_]?ref$"
+  #     pii_type: national_id
+  #     severity: critical
+
+  # Path-based exceptions
+  # exceptions:
+  #   - paths: ["generated/**", "proto/**"]
+  #     action: skip
+  #   - paths: ["**/test/**"]
+  #     action: reduce_severity
+  #     max_severity: medium
 
 # pii_types:
 #   custom:

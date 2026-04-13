@@ -1,0 +1,16 @@
+#!/bin/sh
+# .husky/pre-commit - piilex pre-commit hook
+# Setup:
+#   npx husky init
+#   cp examples/hooks/husky-pre-commit .husky/pre-commit
+
+piilex scan --staged --fail-on high --quiet
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "piilex: PII findings detected. Commit blocked."
+    echo "  Review:  piilex scan --staged"
+    echo "  Skip:    git commit --no-verify"
+    echo ""
+    exit 1
+fi
