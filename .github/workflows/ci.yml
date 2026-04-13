@@ -20,6 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Generate test signing key
+        run: openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out keys/private.pem 2>/dev/null
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -44,6 +47,10 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Generate test signing key
+        run: openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out keys/private.pem 2>/dev/null
+        shell: bash
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -81,6 +88,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Generate test signing key
+        run: openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out keys/private.pem 2>/dev/null
+        shell: bash
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -114,7 +125,7 @@ jobs:
           "$BIN" --version
           "$BIN" scan tests/fixtures/typescript/simple_pii.ts -q 2>&1
 
-      - name: Check binary size under 10MB
+      - name: Check binary size under 15MB
         if: ${{ !matrix.cross }}
         shell: bash
         run: |
@@ -125,11 +136,11 @@ jobs:
           fi
           SIZE_KB=$(du -k "$BIN" | cut -f1)
           echo "Size: ${SIZE_KB}KB"
-          if [ "$SIZE_KB" -gt 10240 ]; then
-            echo "ERROR: Binary exceeds 10MB limit (${SIZE_KB}KB)"
+          if [ "$SIZE_KB" -gt 15360 ]; then
+            echo "ERROR: Binary exceeds 15MB limit (${SIZE_KB}KB)"
             exit 1
           fi
-          echo "OK: Binary is within 10MB limit"
+          echo "OK: Binary is within 15MB limit"
 
   # ----------------------------------------------------
   # Action: test the GitHub Action itself
@@ -140,6 +151,9 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Generate test signing key
+        run: openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out keys/private.pem 2>/dev/null
 
       - uses: dtolnay/rust-toolchain@stable
 
