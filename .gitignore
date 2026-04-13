@@ -24,3 +24,10 @@ editors/intellij/build/
 
 # SaaS dev database
 *.db
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
