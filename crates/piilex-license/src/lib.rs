@@ -511,11 +511,8 @@ mod tests {
                 assert_eq!(info.email, "prod@piilex.dev");
             }
             Err(LicenseError::InvalidToken(_)) => {
-                // Keys don't match (CI environment) -- verify token at least decodes
-                // with the matching key pair
-                let info = validate_token_with_pem(&token, &generate_test_token("x", "pro", 1).1);
-                // This will also fail since keys differ, which is expected in CI
-                // The important thing is that generate_token_with_key didn't panic
+                // Keys don't match (CI environment with fresh key pair).
+                // The important thing is that generate_token_with_key didn't panic.
             }
             Err(e) => panic!("unexpected error: {:?}", e),
         }

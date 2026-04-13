@@ -307,7 +307,10 @@ fn baseline_requires_pro() {
 
 #[test]
 fn pro_via_env_unlocks_framework() {
-    let Some(token) = pro_token() else { eprintln!("Skipping: production key not available"); return; };
+    let Some(token) = pro_token() else {
+        eprintln!("Skipping: production key not available");
+        return;
+    };
 
     piilex()
         .args([
@@ -325,7 +328,10 @@ fn pro_via_env_unlocks_framework() {
 
 #[test]
 fn pro_framework_adds_article_mappings() {
-    let Some(token) = pro_token() else { eprintln!("Skipping: production key not available"); return; };
+    let Some(token) = pro_token() else {
+        eprintln!("Skipping: production key not available");
+        return;
+    };
 
     let output = piilex()
         .args([
@@ -371,7 +377,10 @@ fn license_status_shows_free() {
 
 #[test]
 fn license_status_shows_pro_via_env() {
-    let Some(token) = pro_token() else { eprintln!("Skipping: production key not available"); return; };
+    let Some(token) = pro_token() else {
+        eprintln!("Skipping: production key not available");
+        return;
+    };
 
     piilex()
         .args(["license", "status"])
@@ -444,7 +453,10 @@ fn init_refuses_overwrite() {
 
 #[test]
 fn save_and_diff_baseline() {
-    let Some(token) = pro_token() else { eprintln!("Skipping: production key not available"); return; };
+    let Some(token) = pro_token() else {
+        eprintln!("Skipping: production key not available");
+        return;
+    };
     let tmp = TempDir::new().unwrap();
     let baseline_path = tmp.path().join("baseline.json");
 
@@ -485,7 +497,10 @@ fn save_and_diff_baseline() {
 
 #[test]
 fn baseline_diff_json_output() {
-    let Some(token) = pro_token() else { eprintln!("Skipping: production key not available"); return; };
+    let Some(token) = pro_token() else {
+        eprintln!("Skipping: production key not available");
+        return;
+    };
     let tmp = TempDir::new().unwrap();
     let baseline_path = tmp.path().join("baseline.json");
 
@@ -623,7 +638,10 @@ fn quiet_mode_shows_summary_only() {
 
 #[test]
 fn multiple_frameworks_in_json() {
-    let Some(token) = pro_token() else { eprintln!("Skipping: production key not available"); return; };
+    let Some(token) = pro_token() else {
+        eprintln!("Skipping: production key not available");
+        return;
+    };
 
     let output = piilex()
         .args([
