@@ -62,10 +62,10 @@ Welcome to the piilex Discord!
 piilex detects PII in source code and maps findings to GDPR, CCPA, and APPI.
 
 Quick links:
-  GitHub:   https://github.com/piilex/piilex
-  Docs:     https://github.com/piilex/piilex#readme
+  GitHub:   https://github.com/Ga1or0920/piilex
+  Docs:     https://github.com/Ga1or0920/piilex#readme
   Install:  brew install piilex/tap/piilex
-  Issues:   https://github.com/piilex/piilex/issues
+  Issues:   https://github.com/Ga1or0920/piilex/issues
 
 Channels:
   #help         - Get help using piilex
@@ -90,5 +90,5 @@ Rules:
 2. Create channels per structure above
 3. Set permissions per role table
 4. Add GitHub webhook to #announcements
-5. Create invite link: https://discord.gg/piilex
-6. Add link to README, website, and issue templates
+5. Invite link: https://discord.gg/yTfQme2t (already added to README and issue templates)
+6. Set up GitHub webhook for release notifications
