@@ -31,7 +31,7 @@ jobs:
             ext: tar.gz
             cross: true
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-latest
             artifact: piilex
             ext: tar.gz
           - target: aarch64-apple-darwin
