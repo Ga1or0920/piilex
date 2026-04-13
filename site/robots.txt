@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://piilex.dev/sitemap.xml
+<!-- re-deploy 2026-04-13T06:22:20Z -->
