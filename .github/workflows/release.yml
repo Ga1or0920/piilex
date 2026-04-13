@@ -69,20 +69,8 @@ jobs:
         if: matrix.cross
         run: cross build --release --target ${{ matrix.target }}
 
-      - name: Build slim variant (web languages only)
-        if: ${{ !matrix.cross }}
-        run: |
-          cargo build --release --target ${{ matrix.target }} \
-            --no-default-features --features lang-web
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            cp "target/${{ matrix.target }}/release/${{ matrix.artifact }}" \
-               "target/${{ matrix.target }}/release/piilex-slim${{ matrix.artifact == 'piilex.exe' && '.exe' || '' }}"
-          else
-            cp "target/${{ matrix.target }}/release/${{ matrix.artifact }}" \
-               "target/${{ matrix.target }}/release/piilex-slim"
-          fi
-          # Rebuild full version for packaging
-          cargo build --release --target ${{ matrix.target }}
+      # Slim variant is built separately and not required for release
+      # Users can build it locally: cargo build --release --no-default-features --features lang-web
 
       - name: Verify binary runs
         if: ${{ !matrix.cross }}
